@@ -3,63 +3,51 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Тест Web Bluetooth с Mi Band</title>
+    <title>Тест Web Bluetooth</title>
     <style>
         body { font-family: -apple-system, sans-serif; background: #0f172a; color: #fff; padding: 20px; text-align: center; }
         .card { background: #1e293b; border-radius: 20px; padding: 24px; margin-top: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.5); }
         .btn { background: #10b981; color: white; border: none; padding: 18px 24px; font-size: 18px; font-weight: bold; border-radius: 14px; cursor: pointer; width: 100%; }
         .btn:active { transform: scale(0.98); }
-        #status { color: #94a3b8; font-family: monospace; margin-top: 15px; font-size: 14px; }
-        #batteryResult { font-size: 64px; font-weight: 900; color: #38bdf8; margin: 20px 0; }
+        #status { color: #94a3b8; font-family: monospace; margin-top: 15px; font-size: 14px; word-break: break-all; }
+        #result { font-size: 36px; font-weight: 900; color: #38bdf8; margin: 20px 0; }
     </style>
 </head>
 <body>
 
-    <h2>⚡ Проверка Web Bluetooth</h2>
+    <h2>⚡ Сканер Web Bluetooth</h2>
 
     <div class="card">
-        <button class="btn" onclick="connectMiBand()">ПОДКЛЮЧИТЬ ЧАСЫ / УСТРОЙСТВО</button>
+        <button class="btn" onclick="scanAllDevices()">ИСКАТЬ ВСЕ УСТРОЙСТВА ВОКРУГ</button>
         
-        <div id="status">Нажми кнопку для поиска...</div>
+        <div id="status">Нажми кнопку для сканирования...</div>
         
-        <div id="batteryResult">-- %</div>
+        <div id="result">---</div>
     </div>
 
     <script>
-        async function connectMiBand() {
+        async function scanAllDevices() {
             const status = document.getElementById('status');
-            const batteryResult = document.getElementById('batteryResult');
+            const result = document.getElementById('result');
 
             try {
-                status.innerText = "Сканирование эфира...";
+                status.innerText = "Сканирование ВСЕХ Bluetooth устройств...";
+                status.style.color = "#94a3b8";
 
-                // 1. Запрашиваем у браузера поиск любых BLE-устройств с сервисом батареи
+                // Включаем режимы «Показать ВСЁ без фильтров»
                 const device = await navigator.bluetooth.requestDevice({
-                    filters: [{ services: ['battery_service'] }], // Сканируем стандартную батарею BLE
-                    optionalServices: ['battery_service']
+                    acceptAllDevices: true,
+                    optionalServices: ['battery_service'] // Запрашиваем доступ к батарее, если она есть
                 });
 
-                status.innerText = "Сопряжение с " + (device.name || "Устройством") + "...";
+                status.innerText = "Выбрано устройство: " + (device.name || "Без имени (ID: " + device.id.slice(0,8) + "...)");
+                result.innerText = device.name || "Устройство подключено!";
+                result.style.color = "#34d399";
 
-                // 2. Подключаемся к GATT-серверу устройства
+                status.innerText = "Подключение к " + (device.name || "устройству") + "...";
                 const server = await device.gatt.connect();
-                
-                status.innerText = "Получение данных о батарее...";
 
-                // 3. Получаем сервис батареи (стандартный UUID 0x180F)
-                const service = await server.getPrimaryService('battery_service');
-
-                // 4. Получаем характеристику уровня заряда (UUID 0x2A19)
-                const characteristic = await service.getCharacteristic('battery_level');
-
-                // 5. Читаем байт с процентом заряда
-                const value = await characteristic.readValue();
-                const batteryLevel = value.getUint8(0);
-
-                // Выводим результат на экран!
-                batteryResult.innerText = batteryLevel + "%";
-                status.innerText = "✅ ДАННЫЕ УСПЕШНО ПОЛУЧЕНЫ ПО BLUETOOTH!";
-                status.style.color = "#34d399";
+                status.innerText = "✅ УСПЕШНО ПОДКЛЮЧЕНО К GATT-СЕРВЕРУ!";
 
             } catch (error) {
                 status.innerText = "❌ Ошибка: " + error.message;
