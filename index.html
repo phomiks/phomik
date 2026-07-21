@@ -3,51 +3,100 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Тест Web Bluetooth</title>
+    <title>Чтение данных по Bluetooth</title>
     <style>
         body { font-family: -apple-system, sans-serif; background: #0f172a; color: #fff; padding: 20px; text-align: center; }
         .card { background: #1e293b; border-radius: 20px; padding: 24px; margin-top: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.5); }
         .btn { background: #10b981; color: white; border: none; padding: 18px 24px; font-size: 18px; font-weight: bold; border-radius: 14px; cursor: pointer; width: 100%; }
         .btn:active { transform: scale(0.98); }
         #status { color: #94a3b8; font-family: monospace; margin-top: 15px; font-size: 14px; word-break: break-all; }
-        #result { font-size: 36px; font-weight: 900; color: #38bdf8; margin: 20px 0; }
+        .data-box { background: #0f172a; border-radius: 12px; padding: 15px; margin-top: 15px; border: 1px solid #334155; text-align: left; }
+        .val { font-size: 28px; font-weight: bold; color: #38bdf8; }
+        .label { font-size: 12px; color: #94a3b8; text-transform: uppercase; letter-spacing: 1px; }
     </style>
 </head>
 <body>
 
-    <h2>⚡ Сканер Web Bluetooth</h2>
+    <h2>⚡ Проверка считывания данных</h2>
 
     <div class="card">
-        <button class="btn" onclick="scanAllDevices()">ИСКАТЬ ВСЕ УСТРОЙСТВА ВОКРУГ</button>
+        <button class="btn" onclick="connectAndRead()">ПОДКЛЮЧИТЬ И СЧИТАТЬ ДАННЫЕ</button>
         
-        <div id="status">Нажми кнопку для сканирования...</div>
+        <div id="status">Нажми кнопку...</div>
         
-        <div id="result">---</div>
+        <div class="data-box">
+            <div class="label">Заряд батареи:</div>
+            <div id="batteryVal" class="val">-- %</div>
+        </div>
+
+        <div class="data-box">
+            <div class="label">Модель / Производитель:</div>
+            <div id="modelVal" class="val" style="font-size: 20px;">--</div>
+        </div>
     </div>
 
     <script>
-        async function scanAllDevices() {
+        async function connectAndRead() {
             const status = document.getElementById('status');
-            const result = document.getElementById('result');
+            const batteryVal = document.getElementById('batteryVal');
+            const modelVal = document.getElementById('modelVal');
+
+            batteryVal.innerText = "-- %";
+            modelVal.innerText = "--";
 
             try {
-                status.innerText = "Сканирование ВСЕХ Bluetooth устройств...";
+                status.innerText = "Сканирование...";
                 status.style.color = "#94a3b8";
 
-                // Включаем режимы «Показать ВСЁ без фильтров»
+                // Запрашиваем устройство и сразу объявляем сервисы, к которым планируем обращаться
                 const device = await navigator.bluetooth.requestDevice({
                     acceptAllDevices: true,
-                    optionalServices: ['battery_service'] // Запрашиваем доступ к батарее, если она есть
+                    optionalServices: ['battery_service', 'device_information']
                 });
 
-                status.innerText = "Выбрано устройство: " + (device.name || "Без имени (ID: " + device.id.slice(0,8) + "...)");
-                result.innerText = device.name || "Устройство подключено!";
-                result.style.color = "#34d399";
-
-                status.innerText = "Подключение к " + (device.name || "устройству") + "...";
+                status.innerText = "Подключение к GATT-серверу " + (device.name || "устройства") + "...";
                 const server = await device.gatt.connect();
 
-                status.innerText = "✅ УСПЕШНО ПОДКЛЮЧЕНО К GATT-СЕРВЕРУ!";
+                status.innerText = "Подключено! Считывание байтов...";
+
+                // 1. Пробуем списать БАТАРЕЮ
+                try {
+                    const batteryService = await server.getPrimaryService('battery_service');
+                    const batteryChar = await batteryService.getCharacteristic('battery_level');
+                    const batteryData = await batteryChar.readValue();
+                    const level = batteryData.getUint8(0);
+                    batteryVal.innerText = level + "%";
+                    batteryVal.style.color = "#4ade80";
+                } catch (e) {
+                    batteryVal.innerText = "Заблокировано / Нет";
+                    batteryVal.style.color = "#f87171";
+                }
+
+                // 2. Пробуем списать ИНФОРМАЦИЮ О МОДЕЛИ
+                try {
+                    const infoService = await server.getPrimaryService('device_information');
+                    
+                    // Попытка считывания названия модели или производителя
+                    let modelText = "";
+                    try {
+                        const modelChar = await infoService.getCharacteristic('model_number_string');
+                        const modelData = await modelChar.readValue();
+                        modelText = new TextDecoder().decode(modelData);
+                    } catch(err) {
+                        const mfgChar = await infoService.getCharacteristic('manufacturer_name_string');
+                        const mfgData = await mfgChar.readValue();
+                        modelText = new TextDecoder().decode(mfgData);
+                    }
+                    
+                    modelVal.innerText = modelText;
+                    modelVal.style.color = "#38bdf8";
+                } catch (e) {
+                    modelVal.innerText = "Заблокировано / Нет";
+                    modelVal.style.color = "#f87171";
+                }
+
+                status.innerText = "✅ ОПЕРАЦИЯ ЗАВЕРШЕНА!";
+                status.style.color = "#34d399";
 
             } catch (error) {
                 status.innerText = "❌ Ошибка: " + error.message;
