@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Эмулятор Электроноля</title>
+    <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+    <style>
+        * { box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #0f172a; color: #f8fafc; margin: 0; padding: 16px; text-align: center; }
+        .card { background: #1e293b; border-radius: 20px; padding: 20px; margin-bottom: 16px; }
+        input { width: 100%; padding: 14px; font-size: 20px; text-align: center; border-radius: 12px; border: 2px solid #334155; background: #0f172a; color: #fff; margin-bottom: 10px; font-family: monospace; }
+        .btn { background: #0284c7; color: white; border: none; padding: 16px; font-size: 18px; font-weight: 700; border-radius: 14px; cursor: pointer; width: 100%; margin: 6px 0; active { transform: scale(0.95); } }
+        
+        /* Зоны приземления */
+        .btn-zone { height: 65px; font-size: 22px; margin: 8px 0; }
+        .z-0 { background: #16a34a; border: 2px solid #4ade80; }
+        .z-12 { background: #2563eb; }
+        .z-34 { background: #d97706; }
+        .z-56 { background: #ea580c; }
+        .z-78 { background: #dc2626; }
+    </style>
+</head>
+<body>
+
+    <div class="card">
+        <h3>🔗 Подключение к Приемнику</h3>
+        <input type="number" id="codeInput" placeholder="Введи 4 цифры с экрана" />
+        <button class="btn" onclick="connectToReceiver()">ПОДКЛЮЧИТЬСЯ</button>
+        <div id="status" style="margin-top: 10px; color: #94a3b8; font-size: 14px;">Не подключено</div>
+    </div>
+
+    <div class="card">
+        <h3>🎯 Нажми для симуляции удара</h3>
+        <button class="btn btn-zone z-0" onclick="sendHit('0')">ЗОНА: 0 см (Центр)</button>
+        <button class="btn btn-zone z-12" onclick="sendHit('1-2')">ЗОНА: 1-2 см</button>
+        <button class="btn btn-zone z-34" onclick="sendHit('3-4')">ЗОНА: 3-4 см</button>
+        <button class="btn btn-zone z-56" onclick="sendHit('5-6')">ЗОНА: 5-6 см</button>
+        <button class="btn btn-zone z-78" onclick="sendHit('7-8')">ЗОНА: 7-8 см</button>
+    </div>
+
+    <script>
+        let peer = null;
+        let conn = null;
+
+        function connectToReceiver() {
+            const code = document.getElementById('codeInput').value.trim();
+            if (!code || code.length !== 4) {
+                alert('Введи 4 цифры кода!');
+                return;
+            }
+
+            document.getElementById('status').innerText = 'Соединение...';
+            peer = new Peer();
+
+            peer.on('open', () => {
+                conn = peer.connect('nol-' + code);
+
+                conn.on('open', () => {
+                    document.getElementById('status').innerText = '✅ УСПЕШНО ПОДКЛЮЧЕНО!';
+                    document.getElementById('status').style.color = '#4ade80';
+                });
+
+                conn.on('close', () => {
+                    document.getElementById('status').innerText = '❌ Связь потеряна';
+                    document.getElementById('status').style.color = '#f87171';
+                });
+            });
+        }
+
+        function sendHit(zone) {
+            if (conn && conn.open) {
+                conn.send(zone);
+            } else {
+                alert('Сначала подсоединись к первому телефону!');
+            }
+        }
+    </script>
+</body>
+</html>
