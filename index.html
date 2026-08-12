@@ -27,19 +27,20 @@
         table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 14px; }
         th, td { padding: 12px 8px; border-bottom: 1px solid #334155; text-align: center; }
         th { color: #94a3b8; background: #0f172a; }
+        
+        /* Стиль для синхронизированных оффлайн-прыжков */
+        .row-offline { background-color: rgba(245, 158, 11, 0.1); color: #fcd34d; }
+        .offline-label { font-size: 10px; color: #f59e0b; display: block; text-transform: uppercase; margin-top: 4px; font-weight: bold; }
     </style>
 </head>
 <body>
 
     <div class="card">
         <div id="statusBadge" class="status-badge">НЕ ПОДКЛЮЧЕНО</div>
-        
         <div id="resultDisplay" class="result-box">---</div>
-        
         <div class="timer-container">
             <div id="timerBar" class="timer-bar"></div>
         </div>
-
         <button class="btn btn-reset" onclick="manualReset()">СБРОС (РУЧНОЙ)</button>
         <button class="btn btn-ble" onclick="connectBLE()">ПОДКЛЮЧИТЬ МИШЕНЬ (BLE)</button>
     </div>
@@ -47,7 +48,7 @@
     <div class="card">
         <div style="display: flex; justify-content: space-between; align-items: center;">
             <h3 style="margin: 0; text-align: left; font-size: 18px;">📋 Лог прыжков</h3>
-            <button class="btn btn-clear" style="width: auto;" onclick="clearLogs()">Очистить историю</button>
+            <button class="btn btn-clear" style="width: auto;" onclick="clearLogs()">Очистить</button>
         </div>
         <table>
             <thead>
@@ -92,45 +93,53 @@
             }
         }
 
+        function getCurrentDateTime() {
+            const now = new Date();
+            const dateStr = now.toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric' });
+            const timeStr = now.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+            return `${dateStr} ${timeStr}`;
+        }
+
         function renderLogs() {
             const tbody = document.getElementById('logTable');
             tbody.innerHTML = '';
             jumpLogs.slice().reverse().forEach((log, idx) => {
                 const row = document.createElement('tr');
-                row.innerHTML = `<td><b>${jumpLogs.length - idx}</b></td><td>${log.time}</td><td><b>${log.result} см</b></td>`;
+                if (log.offline) row.className = 'row-offline';
+                
+                let resultHtml = `<b>${log.result} см</b>`;
+                if (log.offline) resultHtml += `<span class="offline-label">Восстановлено</span>`;
+
+                row.innerHTML = `<td><b>${jumpLogs.length - idx}</b></td><td>${log.time}</td><td>${resultHtml}</td>`;
                 tbody.appendChild(row);
             });
         }
 
-        function processHit(zone) {
+        // Обработка прыжка в РЕАЛЬНОМ ВРЕМЕНИ
+        function processLiveHit(zone) {
             if (isLocked) return;
-
             isLocked = true;
             updateStatus('ЗАБЛОКИРОВАНО', 'status-locked');
             
             const display = document.getElementById('resultDisplay');
             display.innerText = zone + " см";
-            
             const isZero = (zone === "0");
-            if (isZero) {
-                display.classList.add('result-zero');
-            } else {
-                display.classList.remove('result-zero');
-            }
+            if (isZero) display.classList.add('result-zero');
+            else display.classList.remove('result-zero');
 
             playBeep(isZero);
 
-            // Получаем и форматируем дату и время
-            const now = new Date();
-            const dateStr = now.toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric' });
-            const timeStr = now.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-            const fullDateTime = `${dateStr} ${timeStr}`;
-
-            jumpLogs.push({ time: fullDateTime, result: zone });
+            jumpLogs.push({ time: getCurrentDateTime(), result: zone, offline: false });
             localStorage.setItem('jumpLogs', JSON.stringify(jumpLogs));
             renderLogs();
-
             startAutoResetTimer(10);
+        }
+
+        // Обработка ПРОПУЩЕННОГО прыжка (синхронизация)
+        function processOfflineHit(zone) {
+            jumpLogs.push({ time: getCurrentDateTime(), result: zone, offline: true });
+            localStorage.setItem('jumpLogs', JSON.stringify(jumpLogs));
+            renderLogs();
         }
 
         function updateStatus(text, className) {
@@ -146,31 +155,20 @@
 
             timerInterval = setInterval(() => {
                 timeLeft--;
-                const percentage = (timeLeft / (seconds * 10)) * 100;
-                timerBar.style.width = percentage + '%';
-
-                if (timeLeft <= 0) {
-                    clearInterval(timerInterval);
-                    manualReset();
-                }
+                timerBar.style.width = ((timeLeft / (seconds * 10)) * 100) + '%';
+                if (timeLeft <= 0) manualReset();
             }, 100);
         }
 
         function manualReset() {
             clearInterval(timerInterval);
             document.getElementById('timerBar').style.width = '0%';
-            
             const display = document.getElementById('resultDisplay');
             display.innerText = "ГОТОВ";
             display.classList.remove('result-zero');
-
             isLocked = false;
             updateStatus('ГОТОВ К ПРЫЖКУ', 'status-ready');
-
-            if (bleCharacteristic) {
-                const encoder = new TextEncoder();
-                bleCharacteristic.writeValue(encoder.encode("RESET")).catch(() => {});
-            }
+            if (bleCharacteristic) bleCharacteristic.writeValue(new TextEncoder().encode("RESET")).catch(() => {});
         }
 
         function clearLogs() {
@@ -181,10 +179,28 @@
             }
         }
 
+        // Разбор данных из Bluetooth
+        function handleBLEData(event) {
+            const value = new TextDecoder().decode(event.target.value).trim();
+            
+            if (value.startsWith("LIVE:")) {
+                const zone = value.split(":")[1];
+                processLiveHit(zone);
+                
+            } else if (value.startsWith("SYNC:")) {
+                const zone = value.split(":")[2];
+                processOfflineHit(zone);
+                
+            } else if (value === "SYNC_END") {
+                // Если передача оффлайн-прыжков завершена, посылаем подтверждение "ACK" для очистки памяти
+                bleCharacteristic.writeValue(new TextEncoder().encode("ACK")).catch(() => {});
+                alert("Пропущенные прыжки успешно загружены с мишени!");
+            }
+        }
+
         async function connectBLE() {
             try {
                 updateStatus('ПОИСК УСТРОЙСТВ...', '');
-
                 const device = await navigator.bluetooth.requestDevice({
                     filters: [{ namePrefix: 'ESP32' }],
                     optionalServices: [BLE_SERVICE_UUID]
@@ -196,10 +212,12 @@
                 bleCharacteristic = await service.getCharacteristic(BLE_CHAR_UUID);
 
                 await bleCharacteristic.startNotifications();
-                bleCharacteristic.addEventListener('characteristicvaluechanged', (event) => {
-                    const value = new TextDecoder().decode(event.target.value).trim();
-                    processHit(value);
-                });
+                bleCharacteristic.addEventListener('characteristicvaluechanged', handleBLEData);
+
+                // Через секунду после подключения запрашиваем историю пропущенных прыжков
+                setTimeout(() => {
+                    bleCharacteristic.writeValue(new TextEncoder().encode("SYNC_REQ")).catch(console.error);
+                }, 1000);
 
                 manualReset();
             } catch (error) {
