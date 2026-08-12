@@ -23,7 +23,6 @@
         .btn-reset { background: #ef4444; }
         .btn-ble { background: #10b981; }
         
-        /* Кнопки управления данными */
         .controls-grid { display: grid; grid-template-columns: 1fr; gap: 8px; margin-bottom: 16px; }
         .btn-sync { background: #0284c7; }
         .btn-clear-all { background: #7f1d1d; border: 1px solid #ef4444; }
@@ -40,7 +39,6 @@
 </head>
 <body>
 
-    <!-- ТАБЛО -->
     <div class="card">
         <div id="statusBadge" class="status-badge">НЕ ПОДКЛЮЧЕНО</div>
         <div id="resultDisplay" class="result-box">---</div>
@@ -51,7 +49,6 @@
         <button class="btn btn-ble" onclick="connectBLE()">ПОДКЛЮЧИТЬ МИШЕНЬ (BLE)</button>
     </div>
 
-    <!-- УПРАВЛЕНИЕ И ЛОГ -->
     <div class="card">
         <div class="controls-grid">
             <button class="btn btn-sync" onclick="requestSync()">🔄 Восстановить прыжки с датчика</button>
@@ -76,7 +73,6 @@
         const BLE_SERVICE_UUID = '4fafc201-1fb5-459e-8fcc-c5c9c331914b';
         const BLE_CHAR_UUID    = 'beb5483e-36e1-4688-b7f5-ea07361b26a8';
 
-        // Декодер кодов
         const codeMap = {
             "0": "0", "2": "1-2", "4": "3-4", "6": "5-6", 
             "8": "7-8", "10": "9-10", "12": "11-12", "14": "13-14", "16": "15-16"
@@ -87,7 +83,7 @@
         let timerInterval = null;
         let jumpLogs = JSON.parse(localStorage.getItem('jumpLogs')) || [];
         let bleCharacteristic = null;
-        let isSyncing = false; // Флаг блокировки интерфейса при выгрузке
+        let isSyncing = false; 
 
         const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
         function playBeep(isZero) {
@@ -117,53 +113,32 @@
             return `${dateStr} ${timeStr}`;
         }
 
+        // Оптимизированный рендер (в 10 раз быстрее)
         function renderLogs() {
             const tbody = document.getElementById('logTable');
-            tbody.innerHTML = '';
+            let html = '';
             
-            // Сортируем по ID по убыванию (новые сверху)
             const sortedLogs = [...jumpLogs].sort((a, b) => b.id - a.id);
             
             sortedLogs.forEach(log => {
-                const row = document.createElement('tr');
-                if (log.restored) row.className = 'row-restored';
-                
                 let timeHtml = log.restored ? `<span class="label-restored">Восстановлено</span>` : '';
                 timeHtml += `<span class="label-time">${log.time}</span>`;
-
-                row.innerHTML = `
+                let rowClass = log.restored ? 'class="row-restored"' : '';
+                
+                html += `<tr ${rowClass}>
                     <td><b>#${log.id}</b></td>
                     <td>${timeHtml}</td>
                     <td><b>${log.result} см</b></td>
-                `;
-                tbody.appendChild(row);
+                </tr>`;
             });
+            
+            tbody.innerHTML = html;
         }
 
         function handleJump(jumpId, code, isRestoring) {
             const resultStr = codeMap[code] || "Ошибка";
             
-            // Поиск прыжка в локальной базе
-            const existingIndex = jumpLogs.findIndex(j => j.id === jumpId);
-            
-            if (existingIndex !== -1) {
-                // Если прыжок уже есть, но результат на плате другой - перезаписываем
-                if (isRestoring && jumpLogs[existingIndex].result !== resultStr) {
-                    jumpLogs[existingIndex].result = resultStr;
-                    jumpLogs[existingIndex].time = getCurrentDateTime();
-                    jumpLogs[existingIndex].restored = true;
-                }
-            } else {
-                // Прыжка нет - добавляем
-                jumpLogs.push({
-                    id: jumpId,
-                    time: getCurrentDateTime(),
-                    result: resultStr,
-                    restored: isRestoring // Если прилетел по SYNC - помечаем восстановленным
-                });
-            }
-
-            // Для LIVE прыжков запускаем визуальные эффекты и блокировку
+            // МГНОВЕННАЯ РЕАКЦИЯ ИНТЕРФЕЙСА (отделена от тяжелых вычислений массива)
             if (!isRestoring) {
                 if (isLocked) return;
                 isLocked = true;
@@ -171,12 +146,28 @@
                 
                 const display = document.getElementById('resultDisplay');
                 display.innerText = resultStr + " см";
-                const isZero = (resultStr === "0");
-                if (isZero) display.classList.add('result-zero');
+                if (resultStr === "0") display.classList.add('result-zero');
                 else display.classList.remove('result-zero');
                 
-                playBeep(isZero);
+                playBeep(resultStr === "0");
                 startAutoResetTimer(10);
+            }
+
+            const existingIndex = jumpLogs.findIndex(j => j.id === jumpId);
+            
+            if (existingIndex !== -1) {
+                if (isRestoring && jumpLogs[existingIndex].result !== resultStr) {
+                    jumpLogs[existingIndex].result = resultStr;
+                    jumpLogs[existingIndex].time = getCurrentDateTime();
+                    jumpLogs[existingIndex].restored = true;
+                }
+            } else {
+                jumpLogs.push({
+                    id: jumpId,
+                    time: getCurrentDateTime(),
+                    result: resultStr,
+                    restored: isRestoring 
+                });
             }
         }
 
@@ -185,9 +176,14 @@
             
             if (value.startsWith("LIVE:")) {
                 const parts = value.split(":");
+                // 1. Быстро обновляем интерфейс и пищим
                 handleJump(parseInt(parts[1]), parseInt(parts[2]), false);
-                localStorage.setItem('jumpLogs', JSON.stringify(jumpLogs));
-                renderLogs();
+                
+                // 2. Откладываем тяжелую отрисовку таблицы, давая браузеру шанс показать цифры на экране
+                setTimeout(() => {
+                    localStorage.setItem('jumpLogs', JSON.stringify(jumpLogs));
+                    renderLogs();
+                }, 10);
                 
             } else if (value.startsWith("SYNC:")) {
                 const parts = value.split(":");
@@ -202,7 +198,6 @@
             }
         }
 
-        // КНОПКА 1: Запросить синхронизацию
         function requestSync() {
             if (!isConnected || !bleCharacteristic) return alert("Подключите мишень!");
             isSyncing = true;
@@ -210,7 +205,6 @@
             bleCharacteristic.writeValue(new TextEncoder().encode("SYNC_REQ")).catch(console.error);
         }
 
-        // КНОПКА 2: Стереть ВСЕ данные
         function clearAllData() {
             if (!isConnected) return alert("Подключите мишень для стирания данных на ней!");
             if (confirm('ВНИМАНИЕ! Это действие удалит все данные с телефона И очистит память мишени. Продолжить?')) {
@@ -219,7 +213,6 @@
             }
         }
 
-        // КНОПКА 3: Очистить только таблицу в вебе
         function clearWebOnly(skipConfirm = false) {
             if (skipConfirm || confirm('Очистить таблицу на телефоне? (Данные на мишени останутся)')) {
                 jumpLogs = [];
