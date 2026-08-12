@@ -22,6 +22,7 @@
         .btn:active { transform: scale(0.98); }
         .btn-reset { background: #ef4444; }
         .btn-ble { background: #10b981; }
+        .btn-clear { background: #475569; font-size: 12px; padding: 8px; margin-top: 10px; }
 
         table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 14px; }
         th, td { padding: 12px 8px; border-bottom: 1px solid #334155; text-align: center; }
@@ -30,7 +31,6 @@
 </head>
 <body>
 
-    <!-- ТАБЛО РЕЗУЛЬТАТОВ -->
     <div class="card">
         <div id="statusBadge" class="status-badge">НЕ ПОДКЛЮЧЕНО</div>
         
@@ -44,9 +44,11 @@
         <button class="btn btn-ble" onclick="connectBLE()">ПОДКЛЮЧИТЬ МИШЕНЬ (BLE)</button>
     </div>
 
-    <!-- ТАБЛИЦА ЛОГОВ -->
     <div class="card">
-        <h3 style="margin: 0 0 10px 0; text-align: left; font-size: 18px;">📋 Лог прыжков</h3>
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+            <h3 style="margin: 0; text-align: left; font-size: 18px;">📋 Лог прыжков</h3>
+            <button class="btn btn-clear" style="width: auto;" onclick="clearLogs()">Очистить историю</button>
+        </div>
         <table>
             <thead>
                 <tr>
@@ -60,16 +62,14 @@
     </div>
 
     <script>
-        // UUID нашей ESP32 SuperMini
         const BLE_SERVICE_UUID = '4fafc201-1fb5-459e-8fcc-c5c9c331914b';
         const BLE_CHAR_UUID    = 'beb5483e-36e1-4688-b7f5-ea07361b26a8';
 
         let isLocked = false;
         let timerInterval = null;
-        let jumpCount = 0;
+        let jumpLogs = JSON.parse(localStorage.getItem('jumpLogs')) || [];
         let bleCharacteristic = null;
 
-        // Звуковой синтезатор (Писк при попадании)
         const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
         function playBeep(isZero) {
             if (audioCtx.state === 'suspended') audioCtx.resume();
@@ -79,14 +79,12 @@
             gain.connect(audioCtx.destination);
 
             if (isZero) {
-                // Победный звуковой сигнал для "0"
                 osc.frequency.setValueAtTime(880, audioCtx.currentTime);
                 osc.frequency.setValueAtTime(1760, audioCtx.currentTime + 0.15);
                 gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
                 osc.start();
                 osc.stop(audioCtx.currentTime + 0.4);
             } else {
-                // Обычный сигнал
                 osc.frequency.setValueAtTime(440, audioCtx.currentTime);
                 gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
                 osc.start();
@@ -94,7 +92,16 @@
             }
         }
 
-        // Фиксация касания зон
+        function renderLogs() {
+            const tbody = document.getElementById('logTable');
+            tbody.innerHTML = '';
+            jumpLogs.slice().reverse().forEach((log, idx) => {
+                const row = document.createElement('tr');
+                row.innerHTML = `<td><b>${jumpLogs.length - idx}</b></td><td>${log.time}</td><td><b>${log.result} см</b></td>`;
+                tbody.appendChild(row);
+            });
+        }
+
         function processHit(zone) {
             if (isLocked) return;
 
@@ -112,7 +119,13 @@
             }
 
             playBeep(isZero);
-            addLog(zone);
+
+            const now = new Date();
+            const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+            jumpLogs.push({ time: timeStr, result: zone });
+            localStorage.setItem('jumpLogs', JSON.stringify(jumpLogs));
+            renderLogs();
+
             startAutoResetTimer(10);
         }
 
@@ -120,17 +133,6 @@
             const badge = document.getElementById('statusBadge');
             badge.innerText = text;
             badge.className = `status-badge ${className}`;
-        }
-
-        function addLog(result) {
-            jumpCount++;
-            const now = new Date();
-            const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-            
-            const tbody = document.getElementById('logTable');
-            const row = document.createElement('tr');
-            row.innerHTML = `<td><b>${jumpCount}</b></td><td>${timeStr}</td><td><b>${result} см</b></td>`;
-            tbody.insertBefore(row, tbody.firstChild);
         }
 
         function startAutoResetTimer(seconds) {
@@ -161,14 +163,20 @@
             isLocked = false;
             updateStatus('ГОТОВ К ПРЫЖКУ', 'status-ready');
 
-            // Отправка сигнала "RESET" по Bluetooth на плату ESP32
             if (bleCharacteristic) {
                 const encoder = new TextEncoder();
                 bleCharacteristic.writeValue(encoder.encode("RESET")).catch(() => {});
             }
         }
 
-        // Подключение к ESP32 по Bluetooth
+        function clearLogs() {
+            if (confirm('Очистить всю историю прыжков?')) {
+                jumpLogs = [];
+                localStorage.removeItem('jumpLogs');
+                renderLogs();
+            }
+        }
+
         async function connectBLE() {
             try {
                 updateStatus('ПОИСК УСТРОЙСТВ...', '');
@@ -195,6 +203,9 @@
                 updateStatus('НЕ ПОДКЛЮЧЕНО', '');
             }
         }
+
+        // Загрузка сохраненных логов при старте страницы
+        renderLogs();
     </script>
 </body>
 </html>
