@@ -28,8 +28,7 @@
         th, td { padding: 12px 8px; border-bottom: 1px solid #334155; text-align: center; }
         th { color: #94a3b8; background: #0f172a; }
         
-        /* Стиль для синхронизированных оффлайн-прыжков */
-        .row-offline { background-color: rgba(245, 158, 11, 0.1); color: #fcd34d; }
+        .row-offline { background-color: rgba(245, 158, 11, 0.15); color: #fcd34d; }
         .offline-label { font-size: 10px; color: #f59e0b; display: block; text-transform: uppercase; margin-top: 4px; font-weight: bold; }
     </style>
 </head>
@@ -66,6 +65,7 @@
         const BLE_SERVICE_UUID = '4fafc201-1fb5-459e-8fcc-c5c9c331914b';
         const BLE_CHAR_UUID    = 'beb5483e-36e1-4688-b7f5-ea07361b26a8';
 
+        let isConnected = false;
         let isLocked = false;
         let timerInterval = null;
         let jumpLogs = JSON.parse(localStorage.getItem('jumpLogs')) || [];
@@ -115,7 +115,6 @@
             });
         }
 
-        // Обработка прыжка в РЕАЛЬНОМ ВРЕМЕНИ
         function processLiveHit(zone) {
             if (isLocked) return;
             isLocked = true;
@@ -135,7 +134,6 @@
             startAutoResetTimer(10);
         }
 
-        // Обработка ПРОПУЩЕННОГО прыжка (синхронизация)
         function processOfflineHit(zone) {
             jumpLogs.push({ time: getCurrentDateTime(), result: zone, offline: true });
             localStorage.setItem('jumpLogs', JSON.stringify(jumpLogs));
@@ -164,11 +162,17 @@
             clearInterval(timerInterval);
             document.getElementById('timerBar').style.width = '0%';
             const display = document.getElementById('resultDisplay');
-            display.innerText = "ГОТОВ";
             display.classList.remove('result-zero');
             isLocked = false;
-            updateStatus('ГОТОВ К ПРЫЖКУ', 'status-ready');
-            if (bleCharacteristic) bleCharacteristic.writeValue(new TextEncoder().encode("RESET")).catch(() => {});
+
+            if (isConnected) {
+                display.innerText = "ГОТОВ";
+                updateStatus('ГОТОВ К ПРЫЖКУ', 'status-ready');
+                if (bleCharacteristic) bleCharacteristic.writeValue(new TextEncoder().encode("RESET")).catch(() => {});
+            } else {
+                display.innerText = "---";
+                updateStatus('НЕ ПОДКЛЮЧЕНО', '');
+            }
         }
 
         function clearLogs() {
@@ -179,7 +183,6 @@
             }
         }
 
-        // Разбор данных из Bluetooth
         function handleBLEData(event) {
             const value = new TextDecoder().decode(event.target.value).trim();
             
@@ -192,10 +195,18 @@
                 processOfflineHit(zone);
                 
             } else if (value === "SYNC_END") {
-                // Если передача оффлайн-прыжков завершена, посылаем подтверждение "ACK" для очистки памяти
-                bleCharacteristic.writeValue(new TextEncoder().encode("ACK")).catch(() => {});
-                alert("Пропущенные прыжки успешно загружены с мишени!");
+                if (bleCharacteristic) {
+                    bleCharacteristic.writeValue(new TextEncoder().encode("ACK")).catch(() => {});
+                }
             }
+        }
+
+        function onDisconnected() {
+            isConnected = false;
+            bleCharacteristic = null;
+            updateStatus('НЕ ПОДКЛЮЧЕНО', '');
+            document.getElementById('resultDisplay').innerText = "---";
+            document.getElementById('resultDisplay').classList.remove('result-zero');
         }
 
         async function connectBLE() {
@@ -206,6 +217,8 @@
                     optionalServices: [BLE_SERVICE_UUID]
                 });
 
+                device.addEventListener('gattserverdisconnected', onDisconnected);
+
                 updateStatus('ПОДКЛЮЧЕНИЕ...', '');
                 const server = await device.gatt.connect();
                 const service = await server.getPrimaryService(BLE_SERVICE_UUID);
@@ -214,15 +227,22 @@
                 await bleCharacteristic.startNotifications();
                 bleCharacteristic.addEventListener('characteristicvaluechanged', handleBLEData);
 
-                // Через секунду после подключения запрашиваем историю пропущенных прыжков
-                setTimeout(() => {
-                    bleCharacteristic.writeValue(new TextEncoder().encode("SYNC_REQ")).catch(console.error);
-                }, 1000);
-
+                isConnected = true;
                 manualReset();
+
+                setTimeout(async () => {
+                    if (bleCharacteristic && isConnected) {
+                        try {
+                            await bleCharacteristic.writeValue(new TextEncoder().encode("SYNC_REQ"));
+                        } catch (e) {
+                            console.error("Ошибка SYNC_REQ:", e);
+                        }
+                    }
+                }, 800);
+
             } catch (error) {
+                onDisconnected();
                 alert('Ошибка Bluetooth: ' + error.message);
-                updateStatus('НЕ ПОДКЛЮЧЕНО', '');
             }
         }
 
