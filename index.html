@@ -42,7 +42,7 @@
         <div id="statusBadge" class="status-badge">НЕ ПОДКЛЮЧЕНО</div>
         <div id="resultDisplay" class="result-box">---</div>
         <div class="timer-container"><div id="timerBar" class="timer-bar"></div></div>
-        <button class="btn btn-reset" onclick="manualReset()">СБРОС (РУЧНОЙ)</button>
+        <button class="btn btn-reset" onclick="manualResetCommand()">СБРОС (РУЧНОЙ)</button>
         <button class="btn btn-ble" onclick="connectBLE()">ПОДКЛЮЧИТЬ МИШЕНЬ (BLE)</button>
     </div>
 
@@ -71,7 +71,6 @@
         let bleCharacteristic = null;
         let isSyncing = false; 
 
-        // Инициализация аудио перенесена на момент подключения
         const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
         
         function initAudioEngine() {
@@ -79,7 +78,7 @@
         }
 
         function playBeep(isZero) {
-            if (audioCtx.state === 'suspended') return; // Защита от фризов
+            if (audioCtx.state === 'suspended') return; 
             const osc = audioCtx.createOscillator();
             const gain = audioCtx.createGain();
             osc.connect(gain);
@@ -123,7 +122,6 @@
         function handleJump(jumpId, code, isRestoring) {
             const resultStr = codeMap[code] || "Ошибка";
             
-            // 1. МГНОВЕННОЕ ОБНОВЛЕНИЕ ТАБЛО (до любых расчетов)
             if (!isRestoring) {
                 if (isLocked) return;
                 isLocked = true;
@@ -140,7 +138,6 @@
                 startAutoResetTimer(10);
             }
 
-            // 2. Внутренние расчеты массива
             const existingIndex = jumpLogs.findIndex(j => j.id === jumpId);
             if (existingIndex !== -1) {
                 if (isRestoring && jumpLogs[existingIndex].result !== resultStr) {
@@ -157,19 +154,15 @@
             const value = new TextDecoder().decode(event.target.value).trim();
             if (value.startsWith("LIVE:")) {
                 const parts = value.split(":");
-                // Синхронный мгновенный вызов, никаких setTimeout
                 handleJump(parseInt(parts[1]), parseInt(parts[2]), false);
                 localStorage.setItem('jumpLogs', JSON.stringify(jumpLogs));
                 renderLogs();
-                
             } else if (value.startsWith("SYNC:")) {
                 const parts = value.split(":");
                 handleJump(parseInt(parts[1]), parseInt(parts[2]), true);
-                
             } else if (value === "SYNC_END") {
                 isSyncing = false;
-                document.getElementById('statusBadge').innerText = 'ГОТОВ К ПРЫЖКУ';
-                document.getElementById('statusBadge').className = 'status-badge status-ready';
+                resetUI();
                 localStorage.setItem('jumpLogs', JSON.stringify(jumpLogs));
                 renderLogs();
                 alert("✅ Синхронизация завершена!");
@@ -207,11 +200,14 @@
             timerInterval = setInterval(() => {
                 timeLeft--;
                 timerBar.style.width = ((timeLeft / (seconds * 10)) * 100) + '%';
-                if (timeLeft <= 0) manualReset();
+                if (timeLeft <= 0) {
+                    // Таймер теперь просто разблокирует экран! Он больше не засоряет радиоэфир командами.
+                    resetUI();
+                }
             }, 100);
         }
 
-        function manualReset() {
+        function resetUI() {
             clearInterval(timerInterval);
             document.getElementById('timerBar').style.width = '0%';
             const display = document.getElementById('resultDisplay');
@@ -221,11 +217,18 @@
                 display.innerText = "ГОТОВ";
                 document.getElementById('statusBadge').innerText = 'ГОТОВ К ПРЫЖКУ';
                 document.getElementById('statusBadge').className = 'status-badge status-ready';
-                if (bleCharacteristic) bleCharacteristic.writeValue(new TextEncoder().encode("RESET")).catch(() => {});
             } else if (!isConnected) {
                 display.innerText = "---";
                 document.getElementById('statusBadge').innerText = 'НЕ ПОДКЛЮЧЕНО';
                 document.getElementById('statusBadge').className = 'status-badge';
+            }
+        }
+
+        function manualResetCommand() {
+            // Эта функция вызывается только при нажатии на физическую кнопку на экране
+            resetUI();
+            if (isConnected && bleCharacteristic) {
+                bleCharacteristic.writeValue(new TextEncoder().encode("RESET")).catch(() => {});
             }
         }
 
@@ -239,7 +242,7 @@
         }
 
         async function connectBLE() {
-            initAudioEngine(); // Прогреваем аудиодвижок по клику пользователя!
+            initAudioEngine();
             try {
                 document.getElementById('statusBadge').innerText = 'ПОИСК...';
                 const device = await navigator.bluetooth.requestDevice({
@@ -257,7 +260,7 @@
                 bleCharacteristic.addEventListener('characteristicvaluechanged', handleBLEData);
                 
                 isConnected = true;
-                manualReset();
+                resetUI();
             } catch (error) {
                 onDisconnected();
                 alert('Ошибка: ' + error.message);
