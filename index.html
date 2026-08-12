@@ -115,7 +115,12 @@
             });
         }
 
-        function processLiveHit(zone) {
+        function processLiveHit(jumpId, zone) {
+            // Отправляем квитанцию получения (ACK) обратно на плату
+            if (bleCharacteristic) {
+                bleCharacteristic.writeValue(new TextEncoder().encode(`LIVE_ACK:${jumpId}`)).catch(() => {});
+            }
+
             if (isLocked) return;
             isLocked = true;
             updateStatus('ЗАБЛОКИРОВАНО', 'status-locked');
@@ -128,16 +133,20 @@
 
             playBeep(isZero);
 
-            jumpLogs.push({ time: getCurrentDateTime(), result: zone, offline: false });
+            jumpLogs.push({ id: jumpId, time: getCurrentDateTime(), result: zone, offline: false });
             localStorage.setItem('jumpLogs', JSON.stringify(jumpLogs));
             renderLogs();
             startAutoResetTimer(10);
         }
 
-        function processOfflineHit(zone) {
-            jumpLogs.push({ time: getCurrentDateTime(), result: zone, offline: true });
-            localStorage.setItem('jumpLogs', JSON.stringify(jumpLogs));
-            renderLogs();
+        function processOfflineHit(jumpId, zone) {
+            // Проверка дубликатов: если этот jumpId уже есть в памяти телефона, игнорируем
+            const exists = jumpLogs.some(log => log.id === jumpId);
+            if (!exists) {
+                jumpLogs.push({ id: jumpId, time: getCurrentDateTime(), result: zone, offline: true });
+                localStorage.setItem('jumpLogs', JSON.stringify(jumpLogs));
+                renderLogs();
+            }
         }
 
         function updateStatus(text, className) {
@@ -187,12 +196,16 @@
             const value = new TextDecoder().decode(event.target.value).trim();
             
             if (value.startsWith("LIVE:")) {
-                const zone = value.split(":")[1];
-                processLiveHit(zone);
+                const parts = value.split(":");
+                const jumpId = parseInt(parts[1]);
+                const zone = parts[2];
+                processLiveHit(jumpId, zone);
                 
             } else if (value.startsWith("SYNC:")) {
-                const zone = value.split(":")[2];
-                processOfflineHit(zone);
+                const parts = value.split(":");
+                const jumpId = parseInt(parts[1]);
+                const zone = parts[2];
+                processOfflineHit(jumpId, zone);
                 
             } else if (value === "SYNC_END") {
                 if (bleCharacteristic) {
