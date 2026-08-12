@@ -6,34 +6,41 @@
     <title>Электроноль — Приемник</title>
     <style>
         * { box-sizing: border-box; }
-        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #0f172a; color: #f8fafc; margin: 0; padding: 16px; text-align: center; }
-        .card { background: #1e293b; border-radius: 20px; padding: 20px; margin-bottom: 16px; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.5); }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #0f172a; color: #f8fafc; margin: 0; padding: 12px; text-align: center; }
+        .card { background: #1e293b; border-radius: 20px; padding: 16px; margin-bottom: 16px; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.5); }
         .status-badge { display: inline-block; padding: 6px 16px; border-radius: 20px; font-size: 14px; font-weight: 600; background: #334155; color: #94a3b8; margin-bottom: 12px; }
         .status-ready { background: #065f46; color: #34d399; }
         .status-locked { background: #991b1b; color: #fca5a5; }
         
-        .result-box { font-size: 64px; font-weight: 900; margin: 15px 0; padding: 20px; border-radius: 16px; background: #0f172a; border: 3px solid #334155; transition: all 0.3s ease; }
+        .result-box { font-size: 64px; font-weight: 900; margin: 10px 0; padding: 15px; border-radius: 16px; background: #0f172a; border: 3px solid #334155; transition: all 0.3s ease; }
         .result-zero { background: #14532d; border-color: #22c55e; color: #4ade80; text-shadow: 0 0 20px rgba(34,197,94,0.6); }
         
-        .timer-container { height: 8px; background: #334155; border-radius: 4px; overflow: hidden; margin-top: 15px; }
+        .timer-container { height: 8px; background: #334155; border-radius: 4px; overflow: hidden; margin-top: 15px; margin-bottom: 15px; }
         .timer-bar { height: 100%; background: #38bdf8; width: 0%; transition: width 0.1s linear; }
         
-        .btn { background: #0284c7; color: white; border: none; padding: 16px; font-size: 18px; font-weight: 700; border-radius: 14px; cursor: pointer; width: 100%; margin: 6px 0; }
+        .btn { color: white; border: none; padding: 14px; font-size: 16px; font-weight: 700; border-radius: 12px; cursor: pointer; width: 100%; margin: 6px 0; }
         .btn:active { transform: scale(0.98); }
         .btn-reset { background: #ef4444; }
         .btn-ble { background: #10b981; }
-        .btn-clear { background: #475569; font-size: 12px; padding: 8px; margin-top: 10px; }
-
-        table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 14px; }
-        th, td { padding: 12px 8px; border-bottom: 1px solid #334155; text-align: center; }
-        th { color: #94a3b8; background: #0f172a; }
         
-        .row-offline { background-color: rgba(245, 158, 11, 0.15); color: #fcd34d; }
-        .offline-label { font-size: 10px; color: #f59e0b; display: block; text-transform: uppercase; margin-top: 4px; font-weight: bold; }
+        /* Кнопки управления данными */
+        .controls-grid { display: grid; grid-template-columns: 1fr; gap: 8px; margin-bottom: 16px; }
+        .btn-sync { background: #0284c7; }
+        .btn-clear-all { background: #7f1d1d; border: 1px solid #ef4444; }
+        .btn-clear-web { background: #475569; }
+
+        table { width: 100%; border-collapse: collapse; font-size: 14px; }
+        th, td { padding: 10px 6px; border-bottom: 1px solid #334155; text-align: center; }
+        th { color: #94a3b8; background: #0f172a; font-size: 12px; }
+        
+        .row-restored { background-color: rgba(234, 179, 8, 0.1); }
+        .label-restored { font-size: 10px; color: #facc15; font-weight: bold; display: block; text-transform: uppercase; margin-bottom: 2px;}
+        .label-time { font-size: 13px; }
     </style>
 </head>
 <body>
 
+    <!-- ТАБЛО -->
     <div class="card">
         <div id="statusBadge" class="status-badge">НЕ ПОДКЛЮЧЕНО</div>
         <div id="resultDisplay" class="result-box">---</div>
@@ -44,15 +51,19 @@
         <button class="btn btn-ble" onclick="connectBLE()">ПОДКЛЮЧИТЬ МИШЕНЬ (BLE)</button>
     </div>
 
+    <!-- УПРАВЛЕНИЕ И ЛОГ -->
     <div class="card">
-        <div style="display: flex; justify-content: space-between; align-items: center;">
-            <h3 style="margin: 0; text-align: left; font-size: 18px;">📋 Лог прыжков</h3>
-            <button class="btn btn-clear" style="width: auto;" onclick="clearLogs()">Очистить</button>
+        <div class="controls-grid">
+            <button class="btn btn-sync" onclick="requestSync()">🔄 Восстановить прыжки с датчика</button>
+            <button class="btn btn-clear-all" onclick="clearAllData()">⚠️ Стереть все данные (Датчик + Веб)</button>
+            <button class="btn btn-clear-web" onclick="clearWebOnly()">🧹 Очистить таблицу (Только Веб)</button>
         </div>
+
+        <h3 style="margin: 10px 0; text-align: left; font-size: 18px; color: #cbd5e1;">📋 Лог прыжков</h3>
         <table>
             <thead>
                 <tr>
-                    <th>№</th>
+                    <th>ID</th>
                     <th>Дата и Время</th>
                     <th>Результат</th>
                 </tr>
@@ -65,11 +76,18 @@
         const BLE_SERVICE_UUID = '4fafc201-1fb5-459e-8fcc-c5c9c331914b';
         const BLE_CHAR_UUID    = 'beb5483e-36e1-4688-b7f5-ea07361b26a8';
 
+        // Декодер кодов
+        const codeMap = {
+            "0": "0", "2": "1-2", "4": "3-4", "6": "5-6", 
+            "8": "7-8", "10": "9-10", "12": "11-12", "14": "13-14", "16": "15-16"
+        };
+
         let isConnected = false;
         let isLocked = false;
         let timerInterval = null;
         let jumpLogs = JSON.parse(localStorage.getItem('jumpLogs')) || [];
         let bleCharacteristic = null;
+        let isSyncing = false; // Флаг блокировки интерфейса при выгрузке
 
         const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
         function playBeep(isZero) {
@@ -78,7 +96,6 @@
             const gain = audioCtx.createGain();
             osc.connect(gain);
             gain.connect(audioCtx.destination);
-
             if (isZero) {
                 osc.frequency.setValueAtTime(880, audioCtx.currentTime);
                 osc.frequency.setValueAtTime(1760, audioCtx.currentTime + 0.15);
@@ -103,48 +120,110 @@
         function renderLogs() {
             const tbody = document.getElementById('logTable');
             tbody.innerHTML = '';
-            jumpLogs.slice().reverse().forEach((log, idx) => {
+            
+            // Сортируем по ID по убыванию (новые сверху)
+            const sortedLogs = [...jumpLogs].sort((a, b) => b.id - a.id);
+            
+            sortedLogs.forEach(log => {
                 const row = document.createElement('tr');
-                if (log.offline) row.className = 'row-offline';
+                if (log.restored) row.className = 'row-restored';
                 
-                let resultHtml = `<b>${log.result} см</b>`;
-                if (log.offline) resultHtml += `<span class="offline-label">Восстановлено</span>`;
+                let timeHtml = log.restored ? `<span class="label-restored">Восстановлено</span>` : '';
+                timeHtml += `<span class="label-time">${log.time}</span>`;
 
-                row.innerHTML = `<td><b>${jumpLogs.length - idx}</b></td><td>${log.time}</td><td>${resultHtml}</td>`;
+                row.innerHTML = `
+                    <td><b>#${log.id}</b></td>
+                    <td>${timeHtml}</td>
+                    <td><b>${log.result} см</b></td>
+                `;
                 tbody.appendChild(row);
             });
         }
 
-        function processLiveHit(jumpId, zone) {
-            // Отправляем квитанцию получения (ACK) обратно на плату
-            if (bleCharacteristic) {
-                bleCharacteristic.writeValue(new TextEncoder().encode(`LIVE_ACK:${jumpId}`)).catch(() => {});
+        function handleJump(jumpId, code, isRestoring) {
+            const resultStr = codeMap[code] || "Ошибка";
+            
+            // Поиск прыжка в локальной базе
+            const existingIndex = jumpLogs.findIndex(j => j.id === jumpId);
+            
+            if (existingIndex !== -1) {
+                // Если прыжок уже есть, но результат на плате другой - перезаписываем
+                if (isRestoring && jumpLogs[existingIndex].result !== resultStr) {
+                    jumpLogs[existingIndex].result = resultStr;
+                    jumpLogs[existingIndex].time = getCurrentDateTime();
+                    jumpLogs[existingIndex].restored = true;
+                }
+            } else {
+                // Прыжка нет - добавляем
+                jumpLogs.push({
+                    id: jumpId,
+                    time: getCurrentDateTime(),
+                    result: resultStr,
+                    restored: isRestoring // Если прилетел по SYNC - помечаем восстановленным
+                });
             }
 
-            if (isLocked) return;
-            isLocked = true;
-            updateStatus('ЗАБЛОКИРОВАНО', 'status-locked');
-            
-            const display = document.getElementById('resultDisplay');
-            display.innerText = zone + " см";
-            const isZero = (zone === "0");
-            if (isZero) display.classList.add('result-zero');
-            else display.classList.remove('result-zero');
-
-            playBeep(isZero);
-
-            jumpLogs.push({ id: jumpId, time: getCurrentDateTime(), result: zone, offline: false });
-            localStorage.setItem('jumpLogs', JSON.stringify(jumpLogs));
-            renderLogs();
-            startAutoResetTimer(10);
+            // Для LIVE прыжков запускаем визуальные эффекты и блокировку
+            if (!isRestoring) {
+                if (isLocked) return;
+                isLocked = true;
+                updateStatus('ЗАБЛОКИРОВАНО', 'status-locked');
+                
+                const display = document.getElementById('resultDisplay');
+                display.innerText = resultStr + " см";
+                const isZero = (resultStr === "0");
+                if (isZero) display.classList.add('result-zero');
+                else display.classList.remove('result-zero');
+                
+                playBeep(isZero);
+                startAutoResetTimer(10);
+            }
         }
 
-        function processOfflineHit(jumpId, zone) {
-            // Проверка дубликатов: если этот jumpId уже есть в памяти телефона, игнорируем
-            const exists = jumpLogs.some(log => log.id === jumpId);
-            if (!exists) {
-                jumpLogs.push({ id: jumpId, time: getCurrentDateTime(), result: zone, offline: true });
+        function handleBLEData(event) {
+            const value = new TextDecoder().decode(event.target.value).trim();
+            
+            if (value.startsWith("LIVE:")) {
+                const parts = value.split(":");
+                handleJump(parseInt(parts[1]), parseInt(parts[2]), false);
                 localStorage.setItem('jumpLogs', JSON.stringify(jumpLogs));
+                renderLogs();
+                
+            } else if (value.startsWith("SYNC:")) {
+                const parts = value.split(":");
+                handleJump(parseInt(parts[1]), parseInt(parts[2]), true);
+                
+            } else if (value === "SYNC_END") {
+                isSyncing = false;
+                updateStatus('ГОТОВ К ПРЫЖКУ', 'status-ready');
+                localStorage.setItem('jumpLogs', JSON.stringify(jumpLogs));
+                renderLogs();
+                alert("✅ Синхронизация завершена!");
+            }
+        }
+
+        // КНОПКА 1: Запросить синхронизацию
+        function requestSync() {
+            if (!isConnected || !bleCharacteristic) return alert("Подключите мишень!");
+            isSyncing = true;
+            updateStatus('СИНХРОНИЗАЦИЯ...', '');
+            bleCharacteristic.writeValue(new TextEncoder().encode("SYNC_REQ")).catch(console.error);
+        }
+
+        // КНОПКА 2: Стереть ВСЕ данные
+        function clearAllData() {
+            if (!isConnected) return alert("Подключите мишень для стирания данных на ней!");
+            if (confirm('ВНИМАНИЕ! Это действие удалит все данные с телефона И очистит память мишени. Продолжить?')) {
+                bleCharacteristic.writeValue(new TextEncoder().encode("CLEAR_ALL")).catch(console.error);
+                clearWebOnly(true);
+            }
+        }
+
+        // КНОПКА 3: Очистить только таблицу в вебе
+        function clearWebOnly(skipConfirm = false) {
+            if (skipConfirm || confirm('Очистить таблицу на телефоне? (Данные на мишени останутся)')) {
+                jumpLogs = [];
+                localStorage.removeItem('jumpLogs');
                 renderLogs();
             }
         }
@@ -159,7 +238,6 @@
             clearInterval(timerInterval);
             const timerBar = document.getElementById('timerBar');
             let timeLeft = seconds * 10;
-
             timerInterval = setInterval(() => {
                 timeLeft--;
                 timerBar.style.width = ((timeLeft / (seconds * 10)) * 100) + '%';
@@ -173,44 +251,13 @@
             const display = document.getElementById('resultDisplay');
             display.classList.remove('result-zero');
             isLocked = false;
-
-            if (isConnected) {
+            if (isConnected && !isSyncing) {
                 display.innerText = "ГОТОВ";
                 updateStatus('ГОТОВ К ПРЫЖКУ', 'status-ready');
                 if (bleCharacteristic) bleCharacteristic.writeValue(new TextEncoder().encode("RESET")).catch(() => {});
-            } else {
+            } else if (!isConnected) {
                 display.innerText = "---";
                 updateStatus('НЕ ПОДКЛЮЧЕНО', '');
-            }
-        }
-
-        function clearLogs() {
-            if (confirm('Очистить всю историю прыжков?')) {
-                jumpLogs = [];
-                localStorage.removeItem('jumpLogs');
-                renderLogs();
-            }
-        }
-
-        function handleBLEData(event) {
-            const value = new TextDecoder().decode(event.target.value).trim();
-            
-            if (value.startsWith("LIVE:")) {
-                const parts = value.split(":");
-                const jumpId = parseInt(parts[1]);
-                const zone = parts[2];
-                processLiveHit(jumpId, zone);
-                
-            } else if (value.startsWith("SYNC:")) {
-                const parts = value.split(":");
-                const jumpId = parseInt(parts[1]);
-                const zone = parts[2];
-                processOfflineHit(jumpId, zone);
-                
-            } else if (value === "SYNC_END") {
-                if (bleCharacteristic) {
-                    bleCharacteristic.writeValue(new TextEncoder().encode("ACK")).catch(() => {});
-                }
             }
         }
 
@@ -229,33 +276,18 @@
                     filters: [{ namePrefix: 'ESP32' }],
                     optionalServices: [BLE_SERVICE_UUID]
                 });
-
                 device.addEventListener('gattserverdisconnected', onDisconnected);
-
                 updateStatus('ПОДКЛЮЧЕНИЕ...', '');
                 const server = await device.gatt.connect();
                 const service = await server.getPrimaryService(BLE_SERVICE_UUID);
                 bleCharacteristic = await service.getCharacteristic(BLE_CHAR_UUID);
-
                 await bleCharacteristic.startNotifications();
                 bleCharacteristic.addEventListener('characteristicvaluechanged', handleBLEData);
-
                 isConnected = true;
                 manualReset();
-
-                setTimeout(async () => {
-                    if (bleCharacteristic && isConnected) {
-                        try {
-                            await bleCharacteristic.writeValue(new TextEncoder().encode("SYNC_REQ"));
-                        } catch (e) {
-                            console.error("Ошибка SYNC_REQ:", e);
-                        }
-                    }
-                }, 800);
-
             } catch (error) {
                 onDisconnected();
-                alert('Ошибка Bluetooth: ' + error.message);
+                alert('Ошибка: ' + error.message);
             }
         }
 
