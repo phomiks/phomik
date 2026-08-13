@@ -9,43 +9,125 @@
         body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #0f172a; color: #f8fafc; margin: 0; padding: 12px; text-align: center; }
         .card { background: #1e293b; border-radius: 20px; padding: 16px; margin-bottom: 16px; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.5); }
         
-        /* Статусы */
-        .status-badge { display: inline-block; padding: 6px 16px; border-radius: 20px; font-size: 14px; font-weight: 600; background: #334155; color: #94a3b8; margin-bottom: 12px; }
-        .status-ready { background: #065f46; color: #34d399; }
-        .status-locked { background: #991b1b; color: #fca5a5; }
-        
-        /* Табло результатов */
-        .result-box { font-size: 64px; font-weight: 900; margin: 10px 0; padding: 15px; border-radius: 16px; background: #0f172a; border: 3px solid #334155; transition: all 0.1s ease; }
-        .result-zero { background: #14532d; border-color: #22c55e; color: #4ade80; text-shadow: 0 0 20px rgba(34,197,94,0.6); }
-        
+        /* ТАБЛО РЕЗУЛЬТАТОВ */
+        .result-box { 
+            font-size: 52px; 
+            font-weight: 900; 
+            margin: 10px 0; 
+            padding: 15px 10px; 
+            border-radius: 16px; 
+            background: #0f172a; 
+            border: 3px solid #334155; 
+            transition: all 0.15s ease; 
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 110px;
+            user-select: none;
+            word-break: break-word;
+        }
+
+        .result-text-sm {
+            font-size: 20px !important;
+            letter-spacing: 0.5px;
+        }
+
+        .result-connect {
+            font-size: 22px;
+            color: #34d399;
+            border-color: #059669;
+            background: rgba(6, 95, 70, 0.2);
+            cursor: pointer;
+        }
+        .result-connect:active {
+            transform: scale(0.98);
+            background: rgba(6, 95, 70, 0.35);
+        }
+
+        .result-zero { 
+            background: #14532d; 
+            border-color: #22c55e; 
+            color: #4ade80; 
+            text-shadow: 0 0 20px rgba(34,197,94,0.6); 
+        }
+
         /* Таймер */
         .timer-container { height: 8px; background: #334155; border-radius: 4px; overflow: hidden; margin-top: 15px; margin-bottom: 15px; }
         .timer-bar { height: 100%; background: #38bdf8; width: 0%; transition: width 0.1s linear; }
         
-        /* Основные кнопки */
+        /* Кнопки */
         .btn { color: white; border: none; padding: 14px; font-size: 16px; font-weight: 700; border-radius: 12px; cursor: pointer; width: 100%; margin: 6px 0; }
         .btn:active { transform: scale(0.98); }
         .btn-reset { background: #ef4444; }
-        .btn-ble { background: #10b981; }
-        
-        /* Сетка для двух кнопок управления датчиком */
-        .controls-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 16px; }
-        .controls-grid .btn { font-size: 13px; padding: 12px 6px; margin: 0; }
-        .btn-sync { background: #0284c7; }
-        .btn-clear-all { background: #7f1d1d; border: 1px solid #ef4444; }
 
-        /* Заголовок таблицы и мини-кнопка очистки */
-        .table-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+        /* Настройка задержки */
+        .delay-card { background: #0f172a; border-radius: 14px; padding: 12px; margin-bottom: 16px; border: 1px solid #334155; text-align: left; }
+        .delay-header { display: flex; justify-content: space-between; align-items: center; font-size: 14px; font-weight: 600; color: #cbd5e1; margin-bottom: 8px; }
+        .delay-controls { display: flex; gap: 10px; align-items: center; }
+        .delay-slider { flex-grow: 1; accent-color: #38bdf8; cursor: pointer; }
+        
+        .btn-confirm { background: #0284c7; padding: 8px 14px; font-size: 13px; font-weight: 700; border-radius: 8px; border: none; color: white; cursor: pointer; transition: opacity 0.2s; }
+        .btn-confirm:disabled { background: #334155; color: #64748b; cursor: not-allowed; opacity: 0.6; }
+
+        /* Шапка таблицы и Контейнер Меню */
+        .table-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; position: relative; }
         .table-header h3 { margin: 0; font-size: 18px; color: #cbd5e1; }
-        .btn-small { padding: 6px 12px; font-size: 12px; font-weight: 600; border-radius: 8px; border: none; cursor: pointer; color: white; background: #475569; }
-        .btn-small:active { transform: scale(0.95); }
+        
+        /* Кнопка Меню */
+        .menu-btn { 
+            padding: 6px 12px; 
+            font-size: 18px; 
+            line-height: 1;
+            font-weight: bold; 
+            border-radius: 8px; 
+            border: 1px solid #334155; 
+            cursor: pointer; 
+            color: #f8fafc; 
+            background: #0f172a; 
+            transition: background 0.15s;
+        }
+        .menu-btn:active { transform: scale(0.95); background: #334155; }
+
+        /* Выпадающее меню */
+        .dropdown-menu {
+            display: none;
+            position: absolute;
+            right: 0;
+            top: 110%;
+            background: #0f172a;
+            border: 1px solid #334155;
+            border-radius: 12px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.6);
+            z-index: 100;
+            min-width: 210px;
+            padding: 6px;
+            text-align: left;
+        }
+        .dropdown-menu.show { display: block; }
+
+        .menu-item {
+            display: block;
+            width: 100%;
+            background: transparent;
+            color: #f8fafc;
+            border: none;
+            padding: 10px 12px;
+            font-size: 14px;
+            font-weight: 600;
+            border-radius: 8px;
+            cursor: pointer;
+            text-align: left;
+            transition: background 0.15s;
+        }
+        .menu-item:active { background: #1e293b; }
+        .menu-danger { color: #fca5a5; }
+        .menu-divider { border: 0; border-top: 1px solid #334155; margin: 4px 0; }
 
         /* Таблица */
         table { width: 100%; border-collapse: collapse; font-size: 14px; }
         th, td { padding: 10px 6px; border-bottom: 1px solid #334155; text-align: center; }
         th { color: #94a3b8; background: #0f172a; font-size: 12px; }
         
-        /* Стили восстановленных строк */
         .row-restored { background-color: rgba(234, 179, 8, 0.1); }
         .label-restored { font-size: 10px; color: #facc15; font-weight: bold; display: block; text-transform: uppercase; margin-bottom: 2px;}
         .label-time { font-size: 13px; }
@@ -53,24 +135,39 @@
 </head>
 <body>
     <div class="card">
-        <div id="statusBadge" class="status-badge">НЕ ПОДКЛЮЧЕНО</div>
-        <div id="resultDisplay" class="result-box">---</div>
+        <div id="resultDisplay" class="result-box result-connect" onclick="onDisplayClick()">
+            Подключить мишень
+        </div>
+        
         <div class="timer-container"><div id="timerBar" class="timer-bar"></div></div>
         <button class="btn btn-reset" onclick="manualResetCommand()">СБРОС (РУЧНОЙ)</button>
-        <button class="btn btn-ble" onclick="connectBLE()">ПОДКЛЮЧИТЬ МИШЕНЬ (BLE)</button>
     </div>
 
     <div class="card">
-        <!-- Блок кнопок в одну линию (1fr 1fr) -->
-        <div class="controls-grid">
-            <button class="btn btn-sync" onclick="requestSync()">🔄 Восстановить с мишени</button>
-            <button class="btn btn-clear-all" onclick="clearAllData()">⚠️ Стереть везде</button>
+        <!-- НАСТРОЙКА ЗАДЕРЖКИ -->
+        <div class="delay-card">
+            <div class="delay-header">
+                <span>Задержка блокировки:</span>
+                <span id="delayValueText" style="color: #38bdf8;">10 сек</span>
+            </div>
+            <div class="delay-controls">
+                <input type="range" id="delaySlider" class="delay-slider" min="1" max="10" value="10" oninput="onSliderChange()">
+                <button id="btnConfirmDelay" class="btn-confirm" disabled onclick="sendDelaySetting()">Подтвердить</button>
+            </div>
         </div>
         
-        <!-- Заголовок таблицы и кнопка очистки на одной строке -->
+        <!-- ШАПКА ТАБЛИЦЫ С МЕНЮ -->
         <div class="table-header">
-            <h3>📋 Лог прыжков</h3>
-            <button class="btn-small" onclick="clearWebOnly()">🧹 Очистить</button>
+            <h3>Лог прыжков</h3>
+            <div style="position: relative;">
+                <button class="menu-btn" onclick="toggleMenu(event)" aria-label="Меню">☰</button>
+                <div id="dropdownMenu" class="dropdown-menu">
+                    <button class="menu-item" onclick="execMenuAction(requestSync)">Восстановить с мишени</button>
+                    <button class="menu-item menu-danger" onclick="execMenuAction(clearAllData)">Стереть везде</button>
+                    <div class="menu-divider"></div>
+                    <button class="menu-item" onclick="execMenuAction(clearWebOnly)">Очистить таблицу</button>
+                </div>
+            </div>
         </div>
         
         <table>
@@ -85,14 +182,15 @@
         const codeMap = {"0":"0", "2":"1-2", "4":"3-4", "6":"5-6", "8":"7-8", "10":"9-10", "12":"11-12", "14":"13-14", "16":"15-16"};
 
         let isConnected = false;
+        let isConnecting = false;
         let isLocked = false;
         let timerInterval = null;
+        let currentDelaySec = 10;
         let jumpLogs = JSON.parse(localStorage.getItem('jumpLogs')) || [];
         let bleCharacteristic = null;
         let isSyncing = false; 
 
         const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-        
         function initAudioEngine() {
             if (audioCtx.state === 'suspended') audioCtx.resume();
         }
@@ -103,7 +201,6 @@
             const gain = audioCtx.createGain();
             osc.connect(gain);
             gain.connect(audioCtx.destination);
-            
             if (isZero) {
                 osc.frequency.setValueAtTime(880, audioCtx.currentTime);
                 osc.frequency.setValueAtTime(1760, audioCtx.currentTime + 0.15);
@@ -125,11 +222,44 @@
             return `${dateStr} ${timeStr}`;
         }
 
+        function toggleMenu(event) {
+            event.stopPropagation();
+            const menu = document.getElementById('dropdownMenu');
+            menu.classList.toggle('show');
+        }
+
+        function closeMenu() {
+            const menu = document.getElementById('dropdownMenu');
+            if (menu) menu.classList.remove('show');
+        }
+
+        function execMenuAction(actionFn) {
+            closeMenu();
+            actionFn();
+        }
+
+        window.addEventListener('click', function(e) {
+            const menu = document.getElementById('dropdownMenu');
+            if (menu && menu.classList.contains('show')) {
+                if (!menu.contains(e.target)) {
+                    closeMenu();
+                }
+            }
+        });
+
+        function setDisplayStatus(text, isSmall = false, customClass = '') {
+            const display = document.getElementById('resultDisplay');
+            display.className = 'result-box ' + customClass;
+            if (isSmall) {
+                display.classList.add('result-text-sm');
+            }
+            display.innerText = text;
+        }
+
         function renderLogs() {
             const tbody = document.getElementById('logTable');
             let html = '';
             const sortedLogs = [...jumpLogs].sort((a, b) => b.id - a.id);
-            
             sortedLogs.forEach(log => {
                 let timeHtml = log.restored ? `<span class="label-restored">Восстановлено</span>` : '';
                 timeHtml += `<span class="label-time">${log.time}</span>`;
@@ -139,6 +269,28 @@
             tbody.innerHTML = html;
         }
 
+        function onDisplayClick() {
+            if (!isConnected && !isConnecting) {
+                connectBLE();
+            }
+        }
+
+        function onSliderChange() {
+            const val = document.getElementById('delaySlider').value;
+            document.getElementById('delayValueText').innerText = val + " сек";
+            const confirmBtn = document.getElementById('btnConfirmDelay');
+            confirmBtn.disabled = !(isConnected && parseInt(val) !== currentDelaySec);
+        }
+
+        function sendDelaySetting() {
+            if (!isConnected || !bleCharacteristic) return;
+            const val = parseInt(document.getElementById('delaySlider').value);
+            bleCharacteristic.writeValue(new TextEncoder().encode(`SET_DELAY:${val}`)).then(() => {
+                currentDelaySec = val;
+                document.getElementById('btnConfirmDelay').disabled = true;
+            }).catch(console.error);
+        }
+
         function handleJump(jumpId, code, isRestoring) {
             const resultStr = codeMap[code] || "Ошибка";
             
@@ -146,16 +298,13 @@
                 if (isLocked) return;
                 isLocked = true;
                 
-                document.getElementById('statusBadge').innerText = 'ЗАБЛОКИРОВАНО';
-                document.getElementById('statusBadge').className = 'status-badge status-locked';
-                
-                const display = document.getElementById('resultDisplay');
-                display.innerText = resultStr + " см";
-                if (resultStr === "0") display.classList.add('result-zero');
-                else display.classList.remove('result-zero');
+                setDisplayStatus(resultStr + " см");
+                if (resultStr === "0") {
+                    document.getElementById('resultDisplay').classList.add('result-zero');
+                }
                 
                 playBeep(resultStr === "0");
-                startAutoResetTimer(10);
+                startAutoResetTimer(currentDelaySec);
             }
 
             const existingIndex = jumpLogs.findIndex(j => j.id === jumpId);
@@ -185,15 +334,22 @@
                 resetUI();
                 localStorage.setItem('jumpLogs', JSON.stringify(jumpLogs));
                 renderLogs();
-                alert("✅ Синхронизация завершена!");
+                alert("Синхронизация завершена!");
+            } else if (value.startsWith("DELAY:")) {
+                const delayVal = parseInt(value.split(":")[1]);
+                if (delayVal >= 1 && delayVal <= 10) {
+                    currentDelaySec = delayVal;
+                    document.getElementById('delaySlider').value = delayVal;
+                    document.getElementById('delayValueText').innerText = delayVal + " сек";
+                    document.getElementById('btnConfirmDelay').disabled = true;
+                }
             }
         }
 
         function requestSync() {
             if (!isConnected || !bleCharacteristic) return alert("Подключите мишень!");
             isSyncing = true;
-            document.getElementById('statusBadge').innerText = 'СИНХРОНИЗАЦИЯ...';
-            document.getElementById('statusBadge').className = 'status-badge';
+            setDisplayStatus('СИНХРОНИЗАЦИЯ...', true);
             bleCharacteristic.writeValue(new TextEncoder().encode("SYNC_REQ")).catch(console.error);
         }
 
@@ -229,17 +385,12 @@
         function resetUI() {
             clearInterval(timerInterval);
             document.getElementById('timerBar').style.width = '0%';
-            const display = document.getElementById('resultDisplay');
-            display.classList.remove('result-zero');
             isLocked = false;
+
             if (isConnected && !isSyncing) {
-                display.innerText = "ГОТОВ";
-                document.getElementById('statusBadge').innerText = 'ГОТОВ К ПРЫЖКУ';
-                document.getElementById('statusBadge').className = 'status-badge status-ready';
+                setDisplayStatus("ГОТОВ");
             } else if (!isConnected) {
-                display.innerText = "---";
-                document.getElementById('statusBadge').innerText = 'НЕ ПОДКЛЮЧЕНО';
-                document.getElementById('statusBadge').className = 'status-badge';
+                setDisplayStatus("Подключить мишень", true, "result-connect");
             }
         }
 
@@ -252,24 +403,25 @@
 
         function onDisconnected() {
             isConnected = false;
+            isConnecting = false;
             bleCharacteristic = null;
-            document.getElementById('statusBadge').innerText = 'НЕ ПОДКЛЮЧЕНО';
-            document.getElementById('statusBadge').className = 'status-badge';
-            document.getElementById('resultDisplay').innerText = "---";
-            document.getElementById('resultDisplay').classList.remove('result-zero');
+            resetUI();
+            document.getElementById('btnConfirmDelay').disabled = true;
         }
 
         async function connectBLE() {
             initAudioEngine();
             try {
-                document.getElementById('statusBadge').innerText = 'ПОИСК...';
+                isConnecting = true;
+                setDisplayStatus('ПОИСК...', true);
+
                 const device = await navigator.bluetooth.requestDevice({
                     filters: [{ namePrefix: 'ESP32' }],
                     optionalServices: [BLE_SERVICE_UUID]
                 });
                 device.addEventListener('gattserverdisconnected', onDisconnected);
                 
-                document.getElementById('statusBadge').innerText = 'ПОДКЛЮЧЕНИЕ...';
+                setDisplayStatus('ПОДКЛЮЧЕНИЕ...', true);
                 const server = await device.gatt.connect();
                 const service = await server.getPrimaryService(BLE_SERVICE_UUID);
                 bleCharacteristic = await service.getCharacteristic(BLE_CHAR_UUID);
@@ -278,13 +430,21 @@
                 bleCharacteristic.addEventListener('characteristicvaluechanged', handleBLEData);
                 
                 isConnected = true;
+                isConnecting = false;
                 resetUI();
+
+                setTimeout(() => {
+                    if (bleCharacteristic && isConnected) {
+                        bleCharacteristic.writeValue(new TextEncoder().encode("GET_DELAY")).catch(console.error);
+                    }
+                }, 500);
+
             } catch (error) {
                 onDisconnected();
-                alert('Ошибка: ' + error.message);
             }
         }
 
+        resetUI();
         renderLogs();
     </script>
 </body>
