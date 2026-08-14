@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Spotting Calculator — Калькулятор Выброски</title>
+    
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+        body, html { height: 100%; width: 100%; overflow: hidden; background: #121212; color: #fff; }
+        
+        #map { height: 100vh; width: 100vw; z-index: 1; }
+        
+        /* Панель управления поверх карты */
+        .control-panel {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            z-index: 1000;
+            background: rgba(18, 18, 18, 0.9);
+            backdrop-filter: blur(8px);
+            padding: 15px;
+            border-radius: 12px;
+            width: calc(100% - 20px);
+            max-width: 360px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+            border: 1px solid #333;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        h2 { font-size: 16px; font-weight: 700; margin-bottom: 12px; color: #00E676; text-transform: uppercase; letter-spacing: 0.5px; }
+
+        .form-group { margin-bottom: 10px; }
+        label { display: flex; justify-content: space-between; font-size: 12px; color: #aaa; margin-bottom: 4px; }
+        span.val { color: #fff; font-weight: bold; }
+
+        input[type="range"] { width: 100%; accent-color: #00E676; }
+        input[type="number"] {
+            width: 100%; padding: 6px 10px; background: #222; border: 1px solid #444; 
+            border-radius: 6px; color: #fff; font-size: 14px;
+        }
+
+        /* Карточка результатов */
+        .results-card {
+            background: #1e272e;
+            border-radius: 8px;
+            padding: 12px;
+            margin-top: 15px;
+            border-left: 4px solid #00E676;
+        }
+        .res-row { display: flex; justify-content: space-between; margin-bottom: 6px; font-size: 13px; }
+        .res-row:last-child { margin-bottom: 0; }
+        .res-val { font-weight: bold; color: #00E676; font-size: 15px; }
+
+        .hint { font-size: 11px; color: #777; margin-top: 8px; text-align: center; }
+    </style>
+</head>
+<body>
+
+    <div id="map"></div>
+
+    <div class="control-panel">
+        <h2>🎯 Параметры выброски</h2>
+
+        <div class="form-group">
+            <label>Направление ветра (откуда): <span class="val" id="windDirVal">270° (Запад)</span></label>
+            <input type="range" id="windDir" min="0" max="359" value="270">
+        </div>
+
+        <div class="form-group">
+            <label>Скорость ветра (м/с): <span class="val" id="windSpeedVal">5 м/с</span></label>
+            <input type="range" id="windSpeed" min="0" max="15" step="0.5" value="5">
+        </div>
+
+        <div class="form-group">
+            <label>Высота выброски (м)</label>
+            <input type="number" id="exitAlt" value="1200" step="50">
+        </div>
+
+        <div class="form-group">
+            <label>Высота раскрытия (м)</label>
+            <input type="number" id="openAlt" value="800" step="50">
+        </div>
+
+        <div class="form-group">
+            <label>Скорость самолета (км/ч)</label>
+            <input type="number" id="acSpeed" value="140" step="5">
+        </div>
+
+        <!-- Результаты расчета -->
+        <div class="results-card">
+            <div class="res-row">
+                <span>Вынос против ветра:</span>
+                <span class="res-val" id="resDistance">0 м</span>
+            </div>
+            <div class="res-row">
+                <span>Время подлета от "0":</span>
+                <span class="res-val" id="resTime">0 сек</span>
+            </div>
+            <div class="res-row">
+                <span>Боевой курс захода:</span>
+                <span class="res-val" id="resHeading">270°</span>
+            </div>
+        </div>
+
+        <div class="hint">Кликните по карте, чтобы задать точку "Ноль" (Цель)</div>
+    </div>
+
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+        // Инициализация карты (по умолчанию координата Коломны/Коробчево, можно сменить)
+        const map = L.map('map').setView([55.0886, 38.9172], 14);
+
+        // Темная тема карты CartoDB DarkMatter для высокой контрастности
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+            maxZoom: 19,
+            attribution: '© OpenStreetMap'
+        }).addTo(map);
+
+        // Начальная точка "Ноль"
+        let zeroLatLng = L.latLng(55.0886, 38.9172);
+
+        // Иконка Ноля (Красная)
+        const zeroIcon = L.divIcon({
+            className: 'custom-icon',
+            html: '<div style="background:#FF1744; width:16px; height:16px; border-radius:50%; border:3px solid #fff; box-shadow: 0 0 10px #FF1744;"></div>',
+            iconSize: [22, 22],
+            iconAnchor: [11, 11]
+        });
+
+        // Иконка Точки Выброски (Зеленая)
+        const exitIcon = L.divIcon({
+            className: 'custom-icon',
+            html: '<div style="background:#00E676; width:16px; height:16px; border-radius:50%; border:3px solid #fff; box-shadow: 0 0 10px #00E676;"></div>',
+            iconSize: [22, 22],
+            iconAnchor: [11, 11]
+        });
+
+        let zeroMarker = L.marker(zeroLatLng, {icon: zeroIcon, draggable: true}).addTo(map);
+        let exitMarker = L.marker(zeroLatLng, {icon: exitIcon}).addTo(map);
+        let flightPath = L.polyline([], {color: '#00E676', weight: 3, dashArray: '6, 8'}).addTo(map);
+
+        // Константы скоростей снижения (м/с)
+        const V_FREEFALL = 50.0; // Свободное падение
+        const V_CANOPY = 4.5;    // Снижение под точным куполом
+
+        // Функция расчета гео-смещения (перевод расстояния в метрах и азимута в Lat/Lng)
+        function calculateOffset(lat, lng, distanceMeters, bearingDegrees) {
+            const R = 6371000; // Радиус Земли в метрах
+            const rad = Math.PI / 180;
+            const lat1 = lat * rad;
+            const lng1 = lng * rad;
+            const brng = bearingDegrees * rad;
+            const d = distanceMeters / R;
+
+            const lat2 = Math.asin(Math.sin(lat1) * Math.cos(d) + Math.cos(lat1) * Math.sin(d) * Math.cos(brng));
+            const lng2 = lng1 + Math.atan2(Math.sin(brng) * Math.sin(d) * Math.cos(lat1), Math.cos(d) - Math.sin(lat1) * Math.sin(lat2));
+
+            return L.latLng(lat2 / rad, lng2 / rad);
+        }
+
+        // Главная функция пересчета
+        function recalculate() {
+            const windDir = parseFloat(document.getElementById('windDir').value);
+            const windSpeed = parseFloat(document.getElementById('windSpeed').value);
+            const exitAlt = parseFloat(document.getElementById('exitAlt').value);
+            const openAlt = parseFloat(document.getElementById('openAlt').value);
+            const acSpeedKmH = parseFloat(document.getElementById('acSpeed').value);
+
+            // 1. Время снижения
+            const ffAlt = Math.max(0, exitAlt - openAlt);
+            const t_ff = ffAlt / V_FREEFALL;
+            const t_canopy = openAlt / V_CANOPY;
+            const t_total = t_ff + t_canopy;
+
+            // 2. Суммарный вынос (расстояние D)
+            const distance = windSpeed * t_total;
+
+            // 3. Точка выброски строится НАВСТРЕЧУ ветру (азимут = windDir)
+            const exitLatLng = calculateOffset(zeroMarker.getLatLng().lat, zeroMarker.getLatLng().lng, distance, windDir);
+
+            // 4. Расчет времени подлета самолета против ветра от ноля до точки выброски
+            const acSpeedMS = acSpeedKmH / 3.6;
+            const groundSpeedMS = Math.max(1, acSpeedMS - windSpeed); // Скорость относительно земли против ветра
+            const t_fly = distance / groundSpeedMS;
+
+            // 5. Обновление элементов на карте
+            exitMarker.setLatLng(exitLatLng);
+            flightPath.setLatLngs([zeroMarker.getLatLng(), exitLatLng]);
+
+            // 6. Обновление UI
+            document.getElementById('windDirVal').innerText = `${windDir}° (${getCompassDirection(windDir)})`;
+            document.getElementById('windSpeedVal').innerText = `${windSpeed} м/с`;
+            document.getElementById('resDistance').innerText = `${Math.round(distance)} м`;
+            document.getElementById('resTime').innerText = `${Math.round(t_fly)} сек`;
+            document.getElementById('resHeading').innerText = `${Math.round(windDir)}°`;
+        }
+
+        // Вспомогательная функция для текстового отображения румба
+        function getCompassDirection(deg) {
+            const dirs = ['С', 'ССВ', 'СВ', 'ВСВ', 'В', 'ВЮВ', 'ЮВ', 'ЮЮВ', 'Ю', 'ЮЮЗ', 'ЮЗ', 'ЗЮЗ', 'З', 'ЗСС', 'СЗ', 'ССЗ'];
+            return dirs[Math.round(deg / 22.5) % 16];
+        }
+
+        // Слушатели событий
+        document.querySelectorAll('input').forEach(input => {
+            input.addEventListener('input', recalculate);
+        });
+
+        // Клик по карте перемещает "Ноль"
+        map.on('click', function(e) {
+            zeroMarker.setLatLng(e.latlng);
+            recalculate();
+        });
+
+        // Перетаскивание маркера "Ноль"
+        zeroMarker.on('drag', recalculate);
+
+        // Первый расчет при загрузке
+        recalculate();
+    </script>
+</body>
+</html>
