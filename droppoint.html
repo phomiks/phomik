@@ -14,48 +14,80 @@
         
         #map { height: 100vh; width: 100vw; z-index: 1; }
         
+        /* По умолчанию (Вертикальный режим / Portrait) — во всю ширину экрана сверху */
         .control-panel {
             position: absolute;
-            top: 10px;
-            left: 10px;
+            top: 0;
+            left: 0;
+            width: 100%;
             z-index: 1000;
             background: rgba(18, 18, 18, 0.94);
             backdrop-filter: blur(10px);
-            padding: 10px;
-            border-radius: 8px;
-            width: calc(100% - 20px);
-            max-width: 360px;
+            padding: 10px 14px;
+            border-bottom-left-radius: 12px;
+            border-bottom-right-radius: 12px;
             box-shadow: 0 4px 20px rgba(0,0,0,0.6);
-            border: 1px solid #333;
-            max-height: 90vh;
+            border-bottom: 1px solid #333;
+            max-height: 85vh;
             overflow-y: auto;
+            transition: all 0.3s ease;
         }
 
-        /* Верхняя совмещенная плашка: Режим + Результаты */
+        /* Горизонтальный режим (Landscape) — в левом верхнем углу аккуратным блоком */
+        @media (orientation: landscape) {
+            .control-panel {
+                top: 10px;
+                left: 10px;
+                width: 360px;
+                max-width: 45vw;
+                border-radius: 8px;
+                border: 1px solid #333;
+                max-height: calc(100vh - 20px);
+            }
+        }
+
         .top-results-bar {
             display: flex;
             align-items: center;
-            justify-content: space-between;
-            background: #1e272e;
-            border-radius: 6px;
-            padding: 6px 10px;
-            margin-bottom: 10px;
-            border-left: 3px solid #00E676;
-            gap: 8px;
+            justify-content: space-around;
+            padding: 2px 0 8px 0;
+            margin-bottom: 6px;
+        }
+        .res-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 12px;
+            color: #aaa;
+        }
+        .res-val {
+            font-weight: bold;
+            color: #00E676;
+            font-size: 15px;
         }
 
-        /* Компактный переключатель режимов */
+        .btn-group { 
+            display: flex; 
+            gap: 6px; 
+            margin-bottom: 8px;
+            align-items: center;
+        }
+
         .mode-selector {
             display: flex;
             background: #121212;
             border-radius: 4px;
             padding: 2px;
             border: 1px solid #333;
-            flex-shrink: 0;
+            flex: 1;
         }
         .mode-selector input[type="radio"] { display: none; }
         .mode-selector label {
-            padding: 5px 8px;
+            flex: 1;
+            padding: 7px 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
             text-align: center;
             font-size: 10px;
             font-weight: 600;
@@ -73,38 +105,15 @@
             color: #000;
         }
 
-        /* Результаты справа */
-        .results-compact {
-            display: flex;
-            flex-direction: column;
-            align-items: flex-end;
-            gap: 2px;
-            flex-grow: 1;
-        }
-        .res-row { 
-            display: flex; 
-            gap: 4px; 
-            font-size: 11px; 
-            color: #aaa; 
-            white-space: nowrap; 
-        }
-        .res-val { 
-            font-weight: bold; 
-            color: #00E676; 
-            font-size: 12px; 
-        }
-
-        .btn-group { display: flex; gap: 6px; margin-bottom: 10px; }
-        
         .btn {
             flex: 1;
-            padding: 8px 10px;
+            padding: 8px 6px;
             background: #29b6f6;
             color: #000;
             border: none;
             border-radius: 4px;
             font-weight: 600;
-            font-size: 11px;
+            font-size: 10px;
             text-transform: uppercase;
             letter-spacing: 0.5px;
             cursor: pointer;
@@ -112,6 +121,7 @@
             align-items: center;
             justify-content: center;
             transition: background 0.2s;
+            white-space: nowrap;
         }
         .btn:hover { background: #81d4fa; }
         .btn-weather { background: #ab47bc; color: #fff; }
@@ -124,7 +134,7 @@
         .form-row {
             display: flex;
             gap: 6px;
-            margin-bottom: 8px;
+            margin-bottom: 6px;
         }
         .form-row .form-group {
             flex: 1;
@@ -147,9 +157,9 @@
             cursor: not-allowed;
         }
 
-        .hint { font-size: 10px; color: #777; margin-top: 6px; text-align: center; }
+        .hint { font-size: 10px; color: #777; margin-top: 4px; text-align: center; }
         
-        #weatherStatus { font-size: 10px; color: #ab47bc; margin-top: 2px; text-align: center; min-height: 12px; }
+        #weatherStatus { font-size: 10px; color: #ab47bc; margin-bottom: 6px; text-align: center; min-height: 12px; }
     </style>
 </head>
 <body>
@@ -157,34 +167,30 @@
     <div id="map"></div>
 
     <div class="control-panel">
-        <!-- Блок результатов и переключатель в одну строку на самом верху -->
         <div class="top-results-bar">
+            <div class="res-item">
+                <span id="lblDistance">Вынос:</span>
+                <span class="res-val" id="resDistance">0 м</span>
+            </div>
+            <div class="res-item">
+                <span id="lblTime">Подлет:</span>
+                <span class="res-val" id="resTime">0 сек</span>
+            </div>
+        </div>
+
+        <div class="btn-group">
             <div class="mode-selector">
                 <input type="radio" id="modePlane" name="craftMode" value="plane" checked>
                 <label for="modePlane">Самолет</label>
                 <input type="radio" id="modeBalloon" name="craftMode" value="balloon">
                 <label for="modeBalloon">Шар</label>
             </div>
-
-            <div class="results-compact">
-                <div class="res-row">
-                    <span id="lblDistance">Вынос:</span>
-                    <span class="res-val" id="resDistance">0 м</span>
-                </div>
-                <div class="res-row">
-                    <span id="lblTime">Подлет:</span>
-                    <span class="res-val" id="resTime">0 сек</span>
-                </div>
-            </div>
-        </div>
-
-        <div class="btn-group">
             <button class="btn" id="btnLocate">Геопозиция</button>
-            <button class="btn btn-weather" id="btnWeather">Загрузить ветер</button>
+            <button class="btn btn-weather" id="btnWeather">Ветер сейчас</button>
         </div>
         <div id="weatherStatus"></div>
 
-        <div class="form-group" style="margin-top: 6px;">
+        <div class="form-group">
             <label>Направление ветра (откуда): <span class="val" id="windDirVal">270° (Запад)</span></label>
             <input type="range" id="windDir" min="0" max="359" value="270">
         </div>
@@ -202,11 +208,11 @@
 
             <div class="form-group">
                 <label>Раскрытие (м)</label>
-                <input type="number" id="openAlt" value="800" min="100" max="10000" step="50">
+                <input type="number" id="openAlt" value="900" min="100" max="10000" step="50">
             </div>
 
             <div class="form-group">
-                <label id="acSpeedLabel">Скорость ЛА</label>
+                <label id="acSpeedLabel">Скорость ЛА (км/ч)</label>
                 <input type="number" id="acSpeed" value="140" min="0" max="1000" step="5">
             </div>
         </div>
@@ -217,8 +223,8 @@
     <!-- Leaflet JS -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script>
-        let defaultLat = 55.0886;
-        let defaultLng = 38.9172;
+        let defaultLat = 56.702458;
+        let defaultLng = 47.887794;
 
         const map = L.map('map').setView([defaultLat, defaultLng], 14);
 
@@ -268,7 +274,7 @@
             const windSpeed = parseFloat(document.getElementById('windSpeed').value);
 
             let rawExitAlt = parseFloat(document.getElementById('exitAlt').value) || 1200;
-            let rawOpenAlt = parseFloat(document.getElementById('openAlt').value) || 800;
+            let rawOpenAlt = parseFloat(document.getElementById('openAlt').value) || 900;
 
             const exitAlt = Math.min(10000, Math.max(100, rawExitAlt));
             const openAlt = Math.min(10000, Math.max(100, Math.min(rawOpenAlt, exitAlt)));
@@ -283,7 +289,6 @@
             const acSpeedInput = document.getElementById('acSpeed');
 
             if (isBalloon) {
-                // РЕЖИМ ШАРА
                 acSpeedInput.disabled = true;
                 acSpeedInput.value = 0;
 
@@ -301,7 +306,6 @@
                 document.getElementById('hintText').innerText = "Кликните по карте, чтобы задать положение шара";
 
             } else {
-                // РЕЖИМ САМОЛЕТА
                 acSpeedInput.disabled = false;
                 if (parseFloat(acSpeedInput.value) === 0) {
                     acSpeedInput.value = 140;
@@ -398,7 +402,7 @@
 
         zeroMarker.on('drag', recalculate);
 
-        getUserLocation();
+        fetchWindData(defaultLat, defaultLng);
         recalculate();
     </script>
 </body>
