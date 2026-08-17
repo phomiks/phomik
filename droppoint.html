@@ -10,90 +10,163 @@
     
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
-        body, html { height: 100%; width: 100%; overflow: hidden; background: #121212; color: #fff; }
+        body, html { height: 100%; width: 100%; overflow: hidden; background: #eef2f5; color: #1a1a1a; }
         
         #map { height: 100vh; width: 100vw; z-index: 1; }
         
-        /* По умолчанию (Вертикальный режим / Portrait) — во всю ширину экрана сверху */
         .control-panel {
             position: absolute;
             top: 0;
             left: 0;
             width: 100%;
             z-index: 1000;
-            background: rgba(18, 18, 18, 0.94);
-            backdrop-filter: blur(10px);
-            padding: 10px 14px;
-            border-bottom-left-radius: 12px;
-            border-bottom-right-radius: 12px;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.6);
-            border-bottom: 1px solid #333;
-            max-height: 85vh;
-            overflow-y: auto;
+            pointer-events: none;
             transition: all 0.3s ease;
         }
 
-        /* Горизонтальный режим (Landscape) — в левом верхнем углу аккуратным блоком */
         @media (orientation: landscape) {
             .control-panel {
                 top: 10px;
                 left: 10px;
-                width: 360px;
-                max-width: 45vw;
+                width: 410px;
+                max-width: 48vw;
+            }
+        }
+
+        .panel-content {
+            pointer-events: auto;
+            background: rgba(255, 255, 255, 0.96);
+            backdrop-filter: blur(12px);
+            padding: 10px 14px 6px 14px;
+            border-bottom-left-radius: 12px;
+            border-bottom-right-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+            border-bottom: none;
+            max-height: 85vh;
+            overflow-y: auto;
+            position: relative;
+        }
+
+        @media (orientation: landscape) {
+            .panel-content {
                 border-radius: 8px;
-                border: 1px solid #333;
+                border: 1px solid #d0d7de;
+                border-bottom: none;
                 max-height: calc(100vh - 20px);
             }
         }
 
-        .top-results-bar {
+        .panel-header {
             display: flex;
             align-items: center;
-            justify-content: space-around;
-            padding: 2px 0 8px 0;
-            margin-bottom: 6px;
+            justify-content: space-between;
+            padding-bottom: 2px;
+            gap: 10px;
+        }
+
+        .header-divider {
+            border-bottom: 1px dashed #ced4da;
+            margin: 4px 0 6px 0;
+        }
+
+        .top-results-bar {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 14px;
+            flex-grow: 1;
         }
         .res-item {
             display: flex;
             align-items: center;
-            gap: 6px;
+            gap: 4px;
             font-size: 12px;
-            color: #aaa;
+            color: #000;
+            font-weight: 700;
         }
         .res-val {
-            font-weight: bold;
-            color: #00E676;
-            font-size: 15px;
+            font-weight: 800;
+            color: #008736;
+            font-size: 16px;
         }
 
-        .btn-group { 
-            display: flex; 
-            gap: 6px; 
+        .menu-btn {
+            background: #333333;
+            border: none;
+            color: #ffffff;
+            font-size: 16px;
+            padding: 4px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            line-height: 1;
+            transition: background 0.2s;
+            flex-shrink: 0;
+            position: relative;
+            z-index: 1002;
+        }
+        .menu-btn:hover { background: #111111; }
+        
+        .menu-btn.active {
+            border-bottom-left-radius: 0;
+            border-bottom-right-radius: 0;
+            margin-bottom: -1px;
+        }
+
+        .menu-dropdown {
+            display: none;
+            flex-direction: column;
+            gap: 8px;
+            background: #f8f9fa;
+            border: 1px solid #333333;
+            border-radius: 6px;
+            padding: 10px;
+            margin-top: 0;
             margin-bottom: 8px;
+            position: relative;
+            z-index: 1001;
+        }
+        .menu-dropdown.active {
+            display: flex;
+            border-top-right-radius: 0;
+        }
+
+        .menu-row {
+            display: flex;
             align-items: center;
+            justify-content: space-between;
+            font-size: 11px;
+            color: #000;
+            font-weight: 700;
+        }
+
+        .menu-row > span {
+            font-size: 13px;
+            font-weight: 800;
+            color: #000;
         }
 
         .mode-selector {
             display: flex;
-            background: #121212;
+            background: #e9ecef;
             border-radius: 4px;
             padding: 2px;
-            border: 1px solid #333;
-            flex: 1;
+            border: 1px solid #ced4da;
+            width: 240px;
+            flex-shrink: 0;
         }
         .mode-selector input[type="radio"] { display: none; }
         .mode-selector label {
             flex: 1;
-            padding: 7px 0;
+            padding: 5px 0;
             display: flex;
             align-items: center;
             justify-content: center;
             text-align: center;
             font-size: 10px;
-            font-weight: 600;
+            font-weight: 700;
             text-transform: uppercase;
             letter-spacing: 0.5px;
-            color: #888;
+            color: #6c757d;
             cursor: pointer;
             border-radius: 3px;
             transition: all 0.2s;
@@ -101,18 +174,31 @@
             white-space: nowrap;
         }
         .mode-selector input[type="radio"]:checked + label {
-            background: #00E676;
-            color: #000;
+            background: #00A843;
+            color: #fff;
+        }
+
+        .btn-section-container {
+            margin-bottom: 4px;
+            border-bottom: none;
+            padding-bottom: 0;
+        }
+
+        .btn-group { 
+            display: flex; 
+            gap: 6px; 
+            margin-bottom: 2px;
+            align-items: center;
         }
 
         .btn {
             flex: 1;
             padding: 8px 6px;
-            background: #29b6f6;
-            color: #000;
+            background: #333333;
+            color: #ffffff;
             border: none;
             border-radius: 4px;
-            font-weight: 600;
+            font-weight: 700;
             font-size: 10px;
             text-transform: uppercase;
             letter-spacing: 0.5px;
@@ -123,18 +209,84 @@
             transition: background 0.2s;
             white-space: nowrap;
         }
-        .btn:hover { background: #81d4fa; }
-        .btn-weather { background: #ab47bc; color: #fff; }
-        .btn-weather:hover { background: #ce93d8; }
+        .btn:hover { background: #111111; }
+        .btn-weather { background: #333333; color: #ffffff; }
+        .btn-weather:hover { background: #111111; }
+        
+        .btn-reset {
+            background: #333333;
+            color: #ffffff;
+            border: none;
+            flex: 0 0 65px;
+            height: 31px;
+            align-self: flex-end;
+            margin-bottom: 0;
+            font-size: 10px;
+            font-weight: 700;
+            padding: 0 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 4px;
+            cursor: pointer;
+            text-transform: uppercase;
+            transition: background 0.2s;
+        }
+        .btn-reset:hover { background: #111111; }
 
-        .form-group { margin-bottom: 8px; }
-        label { display: flex; justify-content: space-between; font-size: 11px; color: #aaa; margin-bottom: 4px; }
-        span.val { color: #fff; font-weight: bold; }
+        .wind-section {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 6px;
+            padding-bottom: 4px;
+            border-bottom: 1px dashed #e0e0e0;
+        }
+        .wind-section.no-border {
+            border-bottom: none !important;
+            padding-bottom: 0;
+            margin-bottom: 2px;
+        }
+
+        .wind-section-title {
+            font-size: 13px;
+            font-weight: 800;
+            width: 75px;
+            flex-shrink: 0;
+            line-height: 1.2;
+        }
+        .wind-controls {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .wind-controls .form-group {
+            margin-bottom: 18px;
+        }
+        .wind-controls .form-group:last-child {
+            margin-bottom: 2px;
+        }
+        .wind-controls label {
+            display: flex;
+            justify-content: space-between;
+            font-size: 11px;
+            color: #222;
+            margin-bottom: -3px;
+            font-weight: 500;
+            line-height: 1.1;
+        }
+        span.val { 
+            color: #000; 
+            font-weight: 700;
+        }
 
         .form-row {
             display: flex;
             gap: 6px;
+            margin-top: 4px;
             margin-bottom: 6px;
+            align-items: flex-end;
         }
         .form-row .form-group {
             flex: 1;
@@ -143,23 +295,128 @@
         .form-row label {
             font-size: 10px;
             white-space: nowrap;
+            color: #000;
+            margin-bottom: 2px;
+            font-weight: 500;
         }
 
-        input[type="range"] { width: 100%; accent-color: #00E676; }
+        input[type="range"] { 
+            -webkit-appearance: none;
+            appearance: none;
+            width: 100%; 
+            height: 4px;
+            background: #ced4da;
+            border-radius: 2px;
+            outline: none !important;
+            border: none !important;
+            margin: -2px 0 0 0;
+            cursor: pointer;
+        }
+        input[type="range"]:focus { outline: none; }
+
+        #windDir10::-webkit-slider-thumb, #windSpeed10::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            background: #00A843;
+            cursor: pointer;
+            border: none;
+            margin-top: -5px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+        }
+        #windDir10::-moz-range-thumb, #windSpeed10::-moz-range-thumb {
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            background: #00A843;
+            cursor: pointer;
+            border: none;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+        }
+
+        #windDir750::-webkit-slider-thumb, #windSpeed750::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            background: #0288d1;
+            cursor: pointer;
+            border: none;
+            margin-top: -5px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+        }
+        #windDir750::-moz-range-thumb, #windSpeed750::-moz-range-thumb {
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            background: #0288d1;
+            cursor: pointer;
+            border: none;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+        }
+
+        #windDir1500::-webkit-slider-thumb, #windSpeed1500::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            background: #7b1fa2;
+            cursor: pointer;
+            border: none;
+            margin-top: -5px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+        }
+        #windDir1500::-moz-range-thumb, #windSpeed1500::-moz-range-thumb {
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            background: #7b1fa2;
+            cursor: pointer;
+            border: none;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+        }
+
         input[type="number"] {
-            width: 100%; padding: 6px 4px; background: #222; border: 1px solid #444; 
-            border-radius: 4px; color: #fff; font-size: 12px; text-align: center;
+            width: 100%; height: 31px; padding: 6px 4px; background: #fff; border: 1px solid #ced4da; 
+            border-radius: 4px; color: #000; font-size: 12px; font-weight: 700; text-align: center;
         }
         input[type="number"]:disabled {
-            background: #181818;
-            border-color: #2a2a2a;
-            color: #555;
+            background: #e9ecef;
+            border-color: #dee2e6;
+            color: #adb5bd;
             cursor: not-allowed;
         }
 
-        .hint { font-size: 10px; color: #777; margin-top: 4px; text-align: center; }
-        
-        #weatherStatus { font-size: 10px; color: #ab47bc; margin-bottom: 6px; text-align: center; min-height: 12px; }
+        .btn-alt-toggle {
+            pointer-events: auto;
+            position: absolute;
+            bottom: -22px;
+            left: 14px;
+            transform: none;
+            background: #333333;
+            color: #ffffff;
+            border: none;
+            border-bottom-left-radius: 8px;
+            border-bottom-right-radius: 8px;
+            padding: 3px 12px;
+            font-size: 11px;
+            font-weight: 700;
+            cursor: pointer;
+            white-space: nowrap;
+            box-shadow: 0 3px 6px rgba(0,0,0,0.2);
+            transition: background 0.2s;
+            z-index: 1001;
+        }
+        .btn-alt-toggle:hover {
+            background: #111111;
+        }
+
+        #weatherStatus { font-size: 10px; color: #7b1fa2; margin-top: 2px; text-align: center; font-weight: 700; }
+        #weatherStatus:empty { display: none; }
     </style>
 </head>
 <body>
@@ -167,57 +424,132 @@
     <div id="map"></div>
 
     <div class="control-panel">
-        <div class="top-results-bar">
-            <div class="res-item">
-                <span id="lblDistance">Вынос:</span>
-                <span class="res-val" id="resDistance">0 м</span>
+        <div class="panel-content">
+            <div class="panel-header">
+                <div class="top-results-bar">
+                    <div class="res-item">
+                        <span>Курс:</span>
+                        <span class="res-val" id="resHeading">270°</span>
+                    </div>
+                    <div class="res-item">
+                        <span id="lblDistance">Вынос:</span>
+                        <span class="res-val" id="resDistance">0 м</span>
+                    </div>
+                    <div class="res-item">
+                        <span id="lblTime">Подлет:</span>
+                        <span class="res-val" id="resTime">0 сек</span>
+                    </div>
+                </div>
+                <button class="menu-btn" id="btnMenuToggle">☰</button>
             </div>
-            <div class="res-item">
-                <span id="lblTime">Подлет:</span>
-                <span class="res-val" id="resTime">0 сек</span>
+
+            <div class="header-divider" id="headerDivider"></div>
+
+            <div class="menu-dropdown" id="menuDropdown">
+                <div class="btn-section-container">
+                    <div class="btn-group">
+                        <button class="btn" id="btnLocate">Геопозиция</button>
+                        <button class="btn btn-weather" id="btnWeather">Ветер сейчас</button>
+                    </div>
+                    <div id="weatherStatus"></div>
+                </div>
+
+                <div class="menu-row">
+                    <span>Карта:</span>
+                    <div class="mode-selector">
+                        <input type="radio" id="mapSchema" name="mapLayerMode" value="schema" checked>
+                        <label for="mapSchema">Схема</label>
+                        <input type="radio" id="mapSat" name="mapLayerMode" value="sat">
+                        <label for="mapSat">Спутник</label>
+                    </div>
+                </div>
+
+                <div class="menu-row">
+                    <span>ЛА:</span>
+                    <div class="mode-selector">
+                        <input type="radio" id="modePlane" name="craftMode" value="plane" checked>
+                        <label for="modePlane">Самолет</label>
+                        <input type="radio" id="modeBalloon" name="craftMode" value="balloon">
+                        <label for="modeBalloon">Шар</label>
+                    </div>
+                </div>
+
+                <div class="menu-row">
+                    <span>Линии:</span>
+                    <div class="mode-selector">
+                        <input type="radio" id="lineDrift" name="lineMode" value="drift" checked>
+                        <label for="lineDrift">Пристрелка</label>
+                        <input type="radio" id="lineMain" name="lineMode" value="main">
+                        <label for="lineMain" id="lblLineMain">Курс</label>
+                        <input type="radio" id="lineWind" name="lineMode" value="wind">
+                        <label for="lineWind">Ветер</label>
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Отделение (м)</label>
+                    <input type="number" id="exitAlt" value="1200" min="100" max="10000" step="50">
+                </div>
+
+                <div class="form-group">
+                    <label>Раскрытие (м)</label>
+                    <input type="number" id="openAlt" value="900" min="100" max="10000" step="50">
+                </div>
+
+                <div class="form-group">
+                    <label id="acSpeedLabel">Скорость ЛА (км/ч)</label>
+                    <input type="number" id="acSpeed" value="140" min="0" max="1000" step="5">
+                </div>
+
+                <button class="btn btn-reset" id="btnResetInputs">Сброс</button>
+            </div>
+
+            <div class="wind-section no-border" id="groundWindSection">
+                <div class="wind-section-title" style="color: #00A843;">Ветер<br>у земли</div>
+                <div class="wind-controls">
+                    <div class="form-group">
+                        <label>Направление (откуда): <span class="val" id="windDirVal10">270° (Запад)</span></label>
+                        <input type="range" id="windDir10" min="0" max="359" value="270" style="accent-color:#00A843;">
+                    </div>
+                    <div class="form-group">
+                        <label>Скорость (м/с): <span class="val" id="windSpeedVal10">5 м/с</span></label>
+                        <input type="range" id="windSpeed10" min="0" max="15" step="0.5" value="5" style="accent-color:#00A843;">
+                    </div>
+                </div>
+            </div>
+
+            <div class="wind-section alt-wind-group" id="group750" style="display: none;">
+                <div class="wind-section-title" style="color: #0288d1;">750 м</div>
+                <div class="wind-controls">
+                    <div class="form-group">
+                        <label>Направление (откуда): <span class="val" id="windDirVal750">280° (Запад)</span></label>
+                        <input type="range" id="windDir750" min="0" max="359" value="280" style="accent-color:#0288d1;">
+                    </div>
+                    <div class="form-group">
+                        <label>Скорость (м/с): <span class="val" id="windSpeedVal750">7 м/с</span></label>
+                        <input type="range" id="windSpeed750" min="0" max="15" step="0.5" value="7" style="accent-color:#0288d1;">
+                    </div>
+                </div>
+            </div>
+
+            <div class="wind-section alt-wind-group no-border" id="group1500" style="display: none;">
+                <div class="wind-section-title" style="color: #7b1fa2;">1500 м</div>
+                <div class="wind-controls">
+                    <div class="form-group">
+                        <label>Направление (откуда): <span class="val" id="windDirVal1500">290° (Запад)</span></label>
+                        <input type="range" id="windDir1500" min="0" max="359" value="290" style="accent-color:#7b1fa2;">
+                    </div>
+                    <div class="form-group">
+                        <label>Скорость (м/с): <span class="val" id="windSpeedVal1500">10 м/с</span></label>
+                        <input type="range" id="windSpeed1500" min="0" max="15" step="0.5" value="10" style="accent-color:#7b1fa2;">
+                    </div>
+                </div>
             </div>
         </div>
 
-        <div class="btn-group">
-            <div class="mode-selector">
-                <input type="radio" id="modePlane" name="craftMode" value="plane" checked>
-                <label for="modePlane">Самолет</label>
-                <input type="radio" id="modeBalloon" name="craftMode" value="balloon">
-                <label for="modeBalloon">Шар</label>
-            </div>
-            <button class="btn" id="btnLocate">Геопозиция</button>
-            <button class="btn btn-weather" id="btnWeather">Ветер сейчас</button>
-        </div>
-        <div id="weatherStatus"></div>
-
-        <div class="form-group">
-            <label>Направление ветра (откуда): <span class="val" id="windDirVal">270° (Запад)</span></label>
-            <input type="range" id="windDir" min="0" max="359" value="270">
-        </div>
-
-        <div class="form-group">
-            <label>Скорость ветра (м/с): <span class="val" id="windSpeedVal">5 м/с</span></label>
-            <input type="range" id="windSpeed" min="0" max="15" step="0.5" value="5">
-        </div>
-
-        <div class="form-row">
-            <div class="form-group">
-                <label>Отделение (м)</label>
-                <input type="number" id="exitAlt" value="1200" min="100" max="10000" step="50">
-            </div>
-
-            <div class="form-group">
-                <label>Раскрытие (м)</label>
-                <input type="number" id="openAlt" value="900" min="100" max="10000" step="50">
-            </div>
-
-            <div class="form-group">
-                <label id="acSpeedLabel">Скорость ЛА (км/ч)</label>
-                <input type="number" id="acSpeed" value="140" min="0" max="1000" step="5">
-            </div>
-        </div>
-
-        <div class="hint" id="hintText">Кликните по карте или перетащите красную точку</div>
+        <button class="btn-alt-toggle" id="btnAltWindToggle">Ветер по высотам ▼</button>
     </div>
 
     <!-- Leaflet JS -->
@@ -228,31 +560,134 @@
 
         const map = L.map('map').setView([defaultLat, defaultLng], 14);
 
-        L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-            maxZoom: 19,
-            attribution: '© OpenStreetMap'
-        }).addTo(map);
-
-        const zeroIcon = L.divIcon({
-            className: 'custom-icon',
-            html: '<div style="background:#FF1744; width:14px; height:14px; border-radius:50%; border:2px solid #fff; box-shadow: 0 0 8px #FF1744;"></div>',
-            iconSize: [18, 18],
-            iconAnchor: [9, 9]
+        const lightLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+            maxZoom: 19, attribution: '© OpenStreetMap'
         });
 
-        const exitIcon = L.divIcon({
-            className: 'custom-icon',
-            html: '<div style="background:#00E676; width:14px; height:14px; border-radius:50%; border:2px solid #fff; box-shadow: 0 0 8px #00E676;"></div>',
-            iconSize: [18, 18],
-            iconAnchor: [9, 9]
+        const satLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+            maxZoom: 19, attribution: 'Esri World Imagery'
         });
 
-        let zeroMarker = L.marker([defaultLat, defaultLng], {icon: zeroIcon, draggable: true}).addTo(map);
-        let exitMarker = L.marker([defaultLat, defaultLng], {icon: exitIcon}).addTo(map);
-        let flightPath = L.polyline([], {color: '#00E676', weight: 2, dashArray: '6, 6'}).addTo(map);
+        lightLayer.addTo(map);
+
+        let isWindLevels = false;
+
+        function createCrossIcon(color = '#00A843', hasShadow = false) {
+            const filterStyle = hasShadow ? 'filter: drop-shadow(0px 2px 4px rgba(0,0,0,0.5));' : '';
+            return L.divIcon({
+                className: 'custom-icon',
+                html: `<svg width="20" height="20" viewBox="0 0 20 20" style="display:block; ${filterStyle}">
+                    <line x1="5" y1="5" x2="15" y2="15" stroke="#ffffff" stroke-width="9" stroke-linecap="round"/>
+                    <line x1="15" y1="5" x2="5" y2="15" stroke="#ffffff" stroke-width="9" stroke-linecap="round"/>
+                    <line x1="5" y1="5" x2="15" y2="15" stroke="${color}" stroke-width="4.5" stroke-linecap="round"/>
+                    <line x1="15" y1="5" x2="5" y2="15" stroke="${color}" stroke-width="4.5" stroke-linecap="round"/>
+                </svg>`,
+                iconSize: [20, 20], iconAnchor: [10, 10]
+            });
+        }
+
+        function createCircleIcon(colorHex, hasShadow = false, isLarge = false) {
+            const shadowStyle = hasShadow ? 'box-shadow: 0 0 6px rgba(0,0,0,0.5);' : 'box-shadow: none;';
+            const size = isLarge ? 20 : 16;
+            const totalSize = isLarge ? 24 : 20;
+            const anchor = totalSize / 2;
+            return L.divIcon({
+                className: 'custom-icon',
+                html: `<div style="background:${colorHex}; width:${size}px; height:${size}px; border-radius:50%; border:3px solid #fff; ${shadowStyle}"></div>`,
+                iconSize: [totalSize, totalSize], iconAnchor: [anchor, anchor]
+            });
+        }
+
+        let zeroMarker = L.marker([defaultLat, defaultLng], {icon: createCrossIcon('#00A843', true), draggable: true}).addTo(map);
+        let exitMarker = L.marker([defaultLat, defaultLng], {icon: createCircleIcon('#00A843', false, false)}).addTo(map);
+
+        let bgPath = L.polyline([], {color: '#ffffff', weight: 6, opacity: 0.95}).addTo(map);
+        let flightPath = L.polyline([], {color: '#00A843', weight: 3, dashArray: '6, 6'}).addTo(map);
+
+        let windVectorGroup = L.layerGroup().addTo(map);
+        let driftSegmentsGroup = L.layerGroup().addTo(map);
 
         const V_FREEFALL = 50.0;
-        const V_CANOPY = 4.5;
+        const V_CANOPY = 5.0;
+
+        function getVerticalSpeed(h, exitAlt, openAlt) {
+            if (h <= openAlt) {
+                return V_CANOPY;
+            }
+            const fallenDist = Math.max(5, exitAlt - h);
+            const vTerm = V_FREEFALL;
+            const g = 9.81;
+            const v = vTerm * Math.sqrt(1 - Math.exp((-2 * g * fallenDist) / (vTerm * vTerm)));
+            return Math.max(10.0, v);
+        }
+
+        // Расчет инерции с учетом строгого времени свободного падения t_ff
+        function getInertiaDistance(acSpeedKmH, t_ff) {
+            if (acSpeedKmH <= 0 || t_ff <= 0) return 0; // При раскрытии "под хвостом" t_ff = 0 -> инерция = 0
+            const v0 = acSpeedKmH / 3.6;
+            const k = 0.0027;
+            const tDecay = Math.min(t_ff, 4.0); // Инерция гасится за время фф, но не более 4 сек
+            return (1 / k) * Math.log(1 + k * v0 * tDecay);
+        }
+
+        function centerMapOn(lat, lng, zoom) {
+            const z = zoom || map.getZoom();
+            map.setView([lat, lng], z, { animate: false });
+
+            const panelContent = document.querySelector('.panel-content');
+            if (panelContent) {
+                const rect = panelContent.getBoundingClientRect();
+                let offsetY = 0;
+                let offsetX = 0;
+
+                if (window.innerHeight > window.innerWidth || rect.width > window.innerWidth * 0.8) {
+                    offsetY = -rect.height / 2;
+                } else {
+                    offsetX = -rect.width / 2;
+                }
+                map.panBy([offsetX, offsetY], { animate: false });
+            }
+        }
+
+        function getAltColor(alt) {
+            let r, g, b;
+            if (alt >= 750) {
+                let t = Math.min(1, (alt - 750) / 750);
+                r = Math.round(2 + (123 - 2) * t);
+                g = Math.round(136 + (31 - 136) * t);
+                b = Math.round(209 + (162 - 209) * t);
+            } else {
+                let t = Math.max(0, (alt - 10) / 740);
+                r = Math.round(0 + (2 - 0) * t);
+                g = Math.round(168 + (136 - 168) * t);
+                b = Math.round(67 + (209 - 67) * t);
+            }
+            return `rgb(${r}, ${g}, ${b})`;
+        }
+
+        function clampAndValidateInputs() {
+            const exitInput = document.getElementById('exitAlt');
+            const openInput = document.getElementById('openAlt');
+            const acSpeedInput = document.getElementById('acSpeed');
+
+            let exitVal = parseFloat(exitInput.value);
+            if (isNaN(exitVal) || exitVal < 100) exitVal = 100;
+            if (exitVal > 10000) exitVal = 10000;
+            exitInput.value = exitVal;
+
+            let openVal = parseFloat(openInput.value);
+            if (isNaN(openVal) || openVal < 100) openVal = 100;
+            if (openVal > exitVal) openVal = exitVal;
+            openInput.value = openVal;
+
+            if (!acSpeedInput.disabled) {
+                let speedVal = parseFloat(acSpeedInput.value);
+                if (isNaN(speedVal) || speedVal < 0) speedVal = 0;
+                if (speedVal > 1000) speedVal = 1000;
+                acSpeedInput.value = speedVal;
+            }
+            recalculate();
+        }
 
         function calculateOffset(lat, lng, distanceMeters, bearingDegrees) {
             const R = 6371000;
@@ -268,76 +703,358 @@
             return L.latLng(lat2 / rad, lng2 / rad);
         }
 
+        function getBearing(lat1, lng1, lat2, lng2) {
+            const rad = Math.PI / 180;
+            const phi1 = lat1 * rad;
+            const phi2 = lat2 * rad;
+            const deltaLambda = (lng2 - lng1) * rad;
+            const y = Math.sin(deltaLambda) * Math.cos(phi2);
+            const x = Math.cos(phi1) * Math.sin(phi2) - Math.sin(phi1) * Math.cos(phi2) * Math.cos(deltaLambda);
+            let theta = Math.atan2(y, x);
+            let bearing = (theta * 180 / Math.PI + 360) % 360;
+            return Math.round(bearing);
+        }
+
+        function getWindAtAlt(alt) {
+            const windDir10 = parseFloat(document.getElementById('windDir10').value) || 0;
+            const windSpeed10 = parseFloat(document.getElementById('windSpeed10').value) || 0;
+
+            if (!isWindLevels) {
+                return { speed: windSpeed10, dir: windDir10 };
+            }
+
+            const w10 = { speed: windSpeed10, dir: windDir10 };
+            const w750 = { speed: parseFloat(document.getElementById('windSpeed750').value) || 0, dir: parseFloat(document.getElementById('windDir750').value) || 0 };
+            const w1500 = { speed: parseFloat(document.getElementById('windSpeed1500').value) || 0, dir: parseFloat(document.getElementById('windDir1500').value) || 0 };
+
+            if (alt <= 10) {
+                return w10;
+            } else if (alt <= 750) {
+                const ratio = (alt - 10) / (750 - 10);
+                return interpolateWind(w10, w750, ratio);
+            } else if (alt <= 1500) {
+                const ratio = (alt - 750) / (1500 - 750);
+                return interpolateWind(w750, w1500, ratio);
+            } else {
+                return w1500;
+            }
+        }
+
+        function interpolateWind(wA, wB, ratio) {
+            const speed = wA.speed + (wB.speed - wA.speed) * ratio;
+            let diff = (wB.dir - wA.dir) % 360;
+            if (diff > 180) diff -= 360;
+            if (diff < -180) diff += 360;
+            const dir = (wA.dir + diff * ratio + 360) % 360;
+            return { speed: Math.round(speed * 10) / 10, dir: (dir + 360) % 360 };
+        }
+
+        function createWindArrow(zeroLatLng, speedMS, dirDeg, colorHex) {
+            if (speedMS <= 0) return L.layerGroup();
+
+            const zeroPoint = map.latLngToContainerPoint(zeroLatLng);
+            const rad = (dirDeg * Math.PI) / 180;
+            
+            const offsetPixels = 12;
+            const lengthPixels = Math.max(6, Math.min(180, speedMS * 12));
+            const wingLen = 14;
+
+            const sinD = Math.sin(rad);
+            const cosD = Math.cos(rad);
+
+            const tipPt = L.point(
+                zeroPoint.x + offsetPixels * sinD,
+                zeroPoint.y - offsetPixels * cosD
+            );
+            const startPt = L.point(
+                zeroPoint.x + (offsetPixels + lengthPixels) * sinD,
+                zeroPoint.y - (offsetPixels + lengthPixels) * cosD
+            );
+
+            const radW1 = ((dirDeg + 30) * Math.PI) / 180;
+            const radW2 = ((dirDeg - 30) * Math.PI) / 180;
+
+            const wing1Pt = L.point(
+                tipPt.x + wingLen * Math.sin(radW1),
+                tipPt.y - wingLen * Math.cos(radW1)
+            );
+            const wing2Pt = L.point(
+                tipPt.x + wingLen * Math.sin(radW2),
+                tipPt.y - wingLen * Math.cos(radW2)
+            );
+
+            const tipLatLng = map.containerPointToLatLng(tipPt);
+            const arrowStartLatLng = map.containerPointToLatLng(startPt);
+            const wing1LatLng = map.containerPointToLatLng(wing1Pt);
+            const wing2LatLng = map.containerPointToLatLng(wing2Pt);
+
+            const bgLine = L.polyline([arrowStartLatLng, tipLatLng, wing1LatLng, tipLatLng, wing2LatLng], {
+                color: '#ffffff', weight: 6, opacity: 0.95
+            });
+            const mainLine = L.polyline([arrowStartLatLng, tipLatLng, wing1LatLng, tipLatLng, wing2LatLng], {
+                color: colorHex, weight: 3
+            });
+
+            return L.layerGroup([bgLine, mainLine]);
+        }
+
         function recalculate() {
             const isBalloon = document.getElementById('modeBalloon').checked;
-            const windDir = parseFloat(document.getElementById('windDir').value);
-            const windSpeed = parseFloat(document.getElementById('windSpeed').value);
+            const lineMode = document.querySelector('input[name="lineMode"]:checked').value;
 
-            let rawExitAlt = parseFloat(document.getElementById('exitAlt').value) || 1200;
-            let rawOpenAlt = parseFloat(document.getElementById('openAlt').value) || 900;
+            const windDir10 = parseFloat(document.getElementById('windDir10').value);
+            const windSpeed10 = parseFloat(document.getElementById('windSpeed10').value);
+            const windDir750 = parseFloat(document.getElementById('windDir750').value) || 0;
+            const windDir1500 = parseFloat(document.getElementById('windDir1500').value) || 0;
 
-            const exitAlt = Math.min(10000, Math.max(100, rawExitAlt));
-            const openAlt = Math.min(10000, Math.max(100, Math.min(rawOpenAlt, exitAlt)));
+            let rawExitAlt = parseFloat(document.getElementById('exitAlt').value);
+            let rawOpenAlt = parseFloat(document.getElementById('openAlt').value);
 
-            const ffAlt = Math.max(0, exitAlt - openAlt);
-            const t_ff = ffAlt / V_FREEFALL;
-            const t_canopy = openAlt / V_CANOPY;
-            const t_total = t_ff + t_canopy;
+            const exitAlt = isNaN(rawExitAlt) ? 1200 : Math.min(10000, Math.max(100, rawExitAlt));
+            const openAlt = isNaN(rawOpenAlt) ? 900 : Math.min(10000, Math.max(100, Math.min(rawOpenAlt, exitAlt)));
 
-            const distance = windSpeed * t_total;
+            const exitColor = getAltColor(exitAlt);
+
+            if (isBalloon) {
+                zeroMarker.setIcon(createCircleIcon(exitColor, true, true));
+                exitMarker.setIcon(createCrossIcon('#00A843', false));
+            } else {
+                zeroMarker.setIcon(createCrossIcon('#00A843', true));
+                exitMarker.setIcon(createCircleIcon(exitColor, false, false));
+            }
+
+            const stepSize = 25;
+            let trajectoryData = [];
+            let exitLatLng;
+            let t_total = 0;
+            let t_ff = 0; // Время свободного падения
+
+            if (isBalloon) {
+                let currLat = zeroMarker.getLatLng().lat;
+                let currLng = zeroMarker.getLatLng().lng;
+                trajectoryData.push({ latLng: L.latLng(currLat, currLng), alt: exitAlt });
+
+                for (let h = exitAlt; h > 0; h -= stepSize) {
+                    const hMid = Math.max(0, h - stepSize / 2);
+                    const w = getWindAtAlt(hMid);
+                    const vZ = getVerticalSpeed(hMid, exitAlt, openAlt);
+                    const dt = Math.min(h, stepSize) / vZ;
+                    t_total += dt;
+                    if (hMid > openAlt) {
+                        t_ff += dt;
+                    }
+                    const driftDist = w.speed * dt;
+                    const blowDir = (w.dir + 180) % 360;
+
+                    const nextPos = calculateOffset(currLat, currLng, driftDist, blowDir);
+                    currLat = nextPos.lat;
+                    currLng = nextPos.lng;
+                    trajectoryData.push({ latLng: nextPos, alt: hMid });
+                }
+                exitLatLng = trajectoryData[trajectoryData.length - 1].latLng;
+            } else {
+                let currLat = zeroMarker.getLatLng().lat;
+                let currLng = zeroMarker.getLatLng().lng;
+                let revData = [{ latLng: L.latLng(currLat, currLng), alt: 0 }];
+
+                for (let h = 0; h < exitAlt; h += stepSize) {
+                    const hMid = h + stepSize / 2;
+                    const w = getWindAtAlt(hMid);
+                    const vZ = getVerticalSpeed(hMid, exitAlt, openAlt);
+                    const dt = Math.min(exitAlt - h, stepSize) / vZ;
+                    t_total += dt;
+                    if (hMid > openAlt) {
+                        t_ff += dt;
+                    }
+                    const driftDist = w.speed * dt;
+                    const windUpstreamDir = w.dir;
+
+                    const prevPos = calculateOffset(currLat, currLng, driftDist, windUpstreamDir);
+                    currLat = prevPos.lat;
+                    currLng = prevPos.lng;
+                    revData.push({ latLng: prevPos, alt: hMid });
+                }
+                trajectoryData = revData.reverse();
+                let pureWindExitLatLng = trajectoryData[0].latLng;
+
+                // Учет инерции самолета с использованием t_ff
+                let rawAcSpeed = parseFloat(document.getElementById('acSpeed').value);
+                const acSpeedKmH = isNaN(rawAcSpeed) ? 140 : Math.min(1000, Math.max(0, rawAcSpeed));
+                const inertiaDist = getInertiaDistance(acSpeedKmH, t_ff);
+
+                // Направление от точки чистого ветрового выноса к точке "Ноль"
+                const bearingToZero = getBearing(
+                    pureWindExitLatLng.lat, pureWindExitLatLng.lng,
+                    zeroMarker.getLatLng().lat, zeroMarker.getLatLng().lng
+                );
+
+                // Вычитание инерции из выноса: смещение точки отделения ближе к "Нолю"
+                exitLatLng = calculateOffset(
+                    pureWindExitLatLng.lat, pureWindExitLatLng.lng,
+                    inertiaDist,
+                    bearingToZero
+                );
+
+                trajectoryData[0] = { latLng: exitLatLng, alt: exitAlt };
+            }
+
+            const totalDistance = map.distance(zeroMarker.getLatLng(), exitLatLng);
+            const heading = getBearing(zeroMarker.getLatLng().lat, zeroMarker.getLatLng().lng, exitLatLng.lat, exitLatLng.lng);
 
             const acSpeedInput = document.getElementById('acSpeed');
 
             if (isBalloon) {
                 acSpeedInput.disabled = true;
-                acSpeedInput.value = 0;
-
-                const driftBearing = (windDir + 180) % 360;
-                const landingLatLng = calculateOffset(zeroMarker.getLatLng().lat, zeroMarker.getLatLng().lng, distance, driftBearing);
-
-                exitMarker.setLatLng(landingLatLng);
-                flightPath.setLatLngs([zeroMarker.getLatLng(), landingLatLng]);
+                exitMarker.setLatLng(exitLatLng);
 
                 document.getElementById('lblDistance').innerText = "Снос:";
                 document.getElementById('lblTime').innerText = "Снижение:";
-
-                document.getElementById('resDistance').innerText = `${Math.round(distance)} м`;
+                document.getElementById('resDistance').innerText = `${Math.round(totalDistance)} м`;
                 document.getElementById('resTime').innerText = `${Math.round(t_total)} сек`;
-                document.getElementById('hintText').innerText = "Кликните по карте, чтобы задать положение шара";
+                document.getElementById('resHeading').innerText = `${heading}°`;
 
             } else {
                 acSpeedInput.disabled = false;
-                if (parseFloat(acSpeedInput.value) === 0) {
-                    acSpeedInput.value = 140;
-                }
-
-                let rawAcSpeed = parseFloat(acSpeedInput.value) || 140;
-                const acSpeedKmH = Math.min(1000, Math.max(0, rawAcSpeed));
-
-                const exitLatLng = calculateOffset(zeroMarker.getLatLng().lat, zeroMarker.getLatLng().lng, distance, windDir);
+                let rawAcSpeed = parseFloat(acSpeedInput.value);
+                const acSpeedKmH = isNaN(rawAcSpeed) ? 140 : Math.min(1000, Math.max(0, rawAcSpeed));
 
                 const acSpeedMS = acSpeedKmH / 3.6;
-                const groundSpeedMS = Math.max(0.1, acSpeedMS - windSpeed);
-                const t_fly = distance / groundSpeedMS;
+                const groundSpeedMS = Math.max(0.1, acSpeedMS - windSpeed10);
+                const t_fly = totalDistance / groundSpeedMS;
 
                 exitMarker.setLatLng(exitLatLng);
-                flightPath.setLatLngs([zeroMarker.getLatLng(), exitLatLng]);
 
                 document.getElementById('lblDistance').innerText = "Вынос:";
                 document.getElementById('lblTime').innerText = "Подлет:";
-
-                document.getElementById('resDistance').innerText = `${Math.round(distance)} м`;
+                document.getElementById('resDistance').innerText = `${Math.round(totalDistance)} м`;
                 document.getElementById('resTime').innerText = `${Math.round(t_fly)} сек`;
-                document.getElementById('hintText').innerText = "Кликните по карте, чтобы задать точку 'Ноль'";
+                document.getElementById('resHeading').innerText = `${heading}°`;
             }
 
-            document.getElementById('windDirVal').innerText = `${windDir}° (${getCompassDirection(windDir)})`;
-            document.getElementById('windSpeedVal').innerText = `${windSpeed} м/с`;
+            windVectorGroup.clearLayers();
+            driftSegmentsGroup.clearLayers();
+
+            if (lineMode === 'wind') {
+                if (map.hasLayer(exitMarker)) map.removeLayer(exitMarker);
+                bgPath.setLatLngs([]);
+                flightPath.setLatLngs([]);
+
+                const zeroPos = zeroMarker.getLatLng();
+                if (isWindLevels) {
+                    const w750Speed = parseFloat(document.getElementById('windSpeed750').value) || 0;
+                    const w1500Speed = parseFloat(document.getElementById('windSpeed1500').value) || 0;
+
+                    windVectorGroup.addLayer(createWindArrow(zeroPos, windSpeed10, windDir10, '#00A843'));
+                    windVectorGroup.addLayer(createWindArrow(zeroPos, w750Speed, windDir750, '#0288d1'));
+                    windVectorGroup.addLayer(createWindArrow(zeroPos, w1500Speed, windDir1500, '#7b1fa2'));
+                } else {
+                    windVectorGroup.addLayer(createWindArrow(zeroPos, windSpeed10, windDir10, '#00A843'));
+                }
+            } else {
+                if (!map.hasLayer(exitMarker)) exitMarker.addTo(map);
+
+                if (lineMode === 'drift') {
+                    const pathPoints = trajectoryData.map(d => d.latLng);
+                    bgPath.setLatLngs(pathPoints);
+                    flightPath.setLatLngs([]);
+
+                    if (isWindLevels) {
+                        for (let i = 0; i < trajectoryData.length - 1; i++) {
+                            const p1 = trajectoryData[i].latLng;
+                            const p2 = trajectoryData[i + 1].latLng;
+                            const altMid = (trajectoryData[i].alt + trajectoryData[i + 1].alt) / 2;
+                            const segColor = getAltColor(altMid);
+
+                            const segLine = L.polyline([p1, p2], {
+                                color: segColor,
+                                weight: 3
+                            });
+                            driftSegmentsGroup.addLayer(segLine);
+                        }
+                    } else {
+                        flightPath.setLatLngs(pathPoints);
+                    }
+                } else {
+                    const pathPoints = [zeroMarker.getLatLng(), exitLatLng];
+                    bgPath.setLatLngs(pathPoints);
+                    flightPath.setLatLngs(pathPoints);
+                }
+            }
+
+            document.getElementById('windDirVal10').innerText = `${windDir10}° (${getCompassDirection(windDir10)})`;
+            document.getElementById('windSpeedVal10').innerText = `${windSpeed10} м/с`;
+
+            document.getElementById('windDirVal750').innerText = `${windDir750}° (${getCompassDirection(windDir750)})`;
+            document.getElementById('windDirVal1500').innerText = `${windDir1500}° (${getCompassDirection(windDir1500)})`;
         }
 
         function getCompassDirection(deg) {
             const dirs = ['С', 'ССВ', 'СВ', 'ВСВ', 'В', 'ВЮВ', 'ЮВ', 'ЮЮВ', 'Ю', 'ЮЮЗ', 'ЮЗ', 'ЗЮЗ', 'З', 'ЗСС', 'СЗ', 'ССЗ'];
             return dirs[Math.round(deg / 22.5) % 16];
+        }
+
+        async function fetchWindData(lat, lng) {
+            const statusEl = document.getElementById('weatherStatus');
+            statusEl.innerText = "Загрузка метеоданных...";
+            
+            try {
+                const cleanLat = Number(lat).toFixed(4);
+                const cleanLng = Number(lng).toFixed(4);
+
+                const response = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${cleanLat}&longitude=${cleanLng}&current=wind_speed_10m,wind_direction_10m&hourly=wind_speed_925hPa,wind_direction_925hPa,wind_speed_850hPa,wind_direction_850hPa&wind_speed_unit=ms`);
+                
+                if (!response.ok) {
+                    throw new Error(`Ошибка сервера: ${response.status}`);
+                }
+
+                const data = await response.json();
+                
+                if (data && data.current) {
+                    const speed = data.current.wind_speed_10m;
+                    const dir = data.current.wind_direction_10m;
+
+                    document.getElementById('windSpeed10').value = speed;
+                    document.getElementById('windDir10').value = dir;
+
+                    let speed750 = Math.round(speed * 1.3 * 10) / 10;
+                    let dir750 = (dir + 15) % 360;
+                    let speed1500 = Math.round(speed * 1.7 * 10) / 10;
+                    let dir1500 = (dir + 30) % 360;
+
+                    if (data.hourly && data.hourly.time) {
+                        const nowISO = new Date().toISOString().substring(0, 13) + ":00";
+                        const hourIndex = data.hourly.time.findIndex(t => t.startsWith(nowISO));
+                        const idx = hourIndex !== -1 ? hourIndex : 0;
+
+                        if (data.hourly.wind_speed_925hPa && data.hourly.wind_speed_925hPa[idx] !== undefined) {
+                            speed750 = data.hourly.wind_speed_925hPa[idx];
+                            dir750 = data.hourly.wind_direction_925hPa[idx];
+                        }
+                        if (data.hourly.wind_speed_850hPa && data.hourly.wind_speed_850hPa[idx] !== undefined) {
+                            speed1500 = data.hourly.wind_speed_850hPa[idx];
+                            dir1500 = data.hourly.wind_direction_850hPa[idx];
+                        }
+                    }
+
+                    document.getElementById('windSpeed750').value = speed750;
+                    document.getElementById('windDir750').value = dir750;
+                    document.getElementById('windSpeedVal750').innerText = `${speed750} м/с`;
+
+                    document.getElementById('windSpeed1500').value = speed1500;
+                    document.getElementById('windDir1500').value = dir1500;
+                    document.getElementById('windSpeedVal1500').innerText = `${speed1500} м/с`;
+
+                    statusEl.innerText = "Метеоданные обновлены";
+                    setTimeout(() => statusEl.innerText = "", 3000);
+                    recalculate();
+                } else {
+                    throw new Error("Неверный формат ответа");
+                }
+            } catch (err) {
+                console.error("Ошибка загрузки метео:", err);
+                statusEl.innerText = "Ошибка загрузки метеоданных";
+                setTimeout(() => statusEl.innerText = "", 4000);
+            }
         }
 
         function getUserLocation() {
@@ -348,7 +1065,7 @@
                         const lat = position.coords.latitude;
                         const lng = position.coords.longitude;
                         zeroMarker.setLatLng([lat, lng]);
-                        map.setView([lat, lng], 15);
+                        centerMapOn(lat, lng, 15);
                         document.getElementById('weatherStatus').innerText = "";
                         recalculate();
                         fetchWindData(lat, lng);
@@ -356,39 +1073,125 @@
                     (error) => {
                         console.warn("Геолокация недоступна:", error.message);
                         document.getElementById('weatherStatus').innerText = "Ошибка получения GPS";
+                        setTimeout(() => document.getElementById('weatherStatus').innerText = "", 4000);
                     },
                     { enableHighAccuracy: true, timeout: 5000 }
                 );
             }
         }
 
-        async function fetchWindData(lat, lng) {
-            const statusEl = document.getElementById('weatherStatus');
-            statusEl.innerText = "Загрузка метеоданных...";
-            try {
-                const response = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&current=wind_speed_10m,wind_direction_10m&wind_speed_unit=ms`);
-                const data = await response.json();
-                
-                if (data && data.current) {
-                    const speed = data.current.wind_speed_10m;
-                    const dir = data.current.wind_direction_10m;
-
-                    document.getElementById('windSpeed').value = speed;
-                    document.getElementById('windDir').value = dir;
-                    statusEl.innerText = "Метеоданные обновлены";
-                    setTimeout(() => statusEl.innerText = "", 3000);
-                    recalculate();
+        document.querySelectorAll('input[name="mapLayerMode"]').forEach(radio => {
+            radio.addEventListener('change', (e) => {
+                if (e.target.value === 'sat') {
+                    map.removeLayer(lightLayer);
+                    satLayer.addTo(map);
+                } else {
+                    map.removeLayer(satLayer);
+                    lightLayer.addTo(map);
                 }
-            } catch (err) {
-                console.error("Ошибка загрузки метео:", err);
-                statusEl.innerText = "Ошибка загрузки метеоданных";
+            });
+        });
+
+        document.querySelectorAll('input[name="craftMode"]').forEach(radio => {
+            radio.addEventListener('change', (e) => {
+                const isBalloon = e.target.value === 'balloon';
+                const acSpeedInput = document.getElementById('acSpeed');
+                const lblLineMain = document.getElementById('lblLineMain');
+
+                if (isBalloon) {
+                    acSpeedInput.disabled = true;
+                    acSpeedInput.value = 0;
+                    lblLineMain.innerText = 'Снос';
+                } else {
+                    acSpeedInput.disabled = false;
+                    let currentVal = parseFloat(acSpeedInput.value);
+                    if (isNaN(currentVal) || currentVal === 0) {
+                        acSpeedInput.value = 140;
+                    }
+                    lblLineMain.innerText = 'Курс';
+                }
+                recalculate();
+            });
+        });
+
+        document.getElementById('btnAltWindToggle').addEventListener('click', () => {
+            isWindLevels = !isWindLevels;
+            const group750 = document.getElementById('group750');
+            const group1500 = document.getElementById('group1500');
+            const toggleBtn = document.getElementById('btnAltWindToggle');
+            const groundSection = document.getElementById('groundWindSection');
+
+            if (isWindLevels) {
+                group750.style.display = 'flex';
+                group1500.style.display = 'flex';
+                toggleBtn.innerText = 'Только ветер у земли ▲';
+                groundSection.classList.remove('no-border');
+            } else {
+                group750.style.display = 'none';
+                group1500.style.display = 'none';
+                toggleBtn.innerText = 'Ветер по высотам ▼';
+                groundSection.classList.add('no-border');
             }
-        }
+            recalculate();
+        });
+
+        document.querySelectorAll('input[name="lineMode"]').forEach(radio => {
+            radio.addEventListener('change', recalculate);
+        });
+
+        document.getElementById('btnMenuToggle').addEventListener('click', () => {
+            const dropdown = document.getElementById('menuDropdown');
+            const divider = document.getElementById('headerDivider');
+            const btn = document.getElementById('btnMenuToggle');
+            
+            dropdown.classList.toggle('active');
+            btn.classList.toggle('active');
+
+            if (dropdown.classList.contains('active')) {
+                divider.style.display = 'none';
+            } else {
+                divider.style.display = 'block';
+            }
+        });
 
         document.getElementById('btnLocate').addEventListener('click', getUserLocation);
         document.getElementById('btnWeather').addEventListener('click', () => {
             const pos = zeroMarker.getLatLng();
             fetchWindData(pos.lat, pos.lng);
+        });
+
+        document.getElementById('btnResetInputs').addEventListener('click', () => {
+            document.getElementById('exitAlt').value = 1200;
+            document.getElementById('openAlt').value = 900;
+            const isBalloon = document.getElementById('modeBalloon').checked;
+            document.getElementById('acSpeed').value = isBalloon ? 0 : 140;
+            recalculate();
+        });
+
+        ['windDir750', 'windSpeed750'].forEach(id => {
+            document.getElementById(id).addEventListener('input', (e) => {
+                const isSpeed = id.includes('Speed');
+                if (isSpeed) {
+                    document.getElementById('windSpeedVal750').innerText = `${e.target.value} м/с`;
+                }
+                recalculate();
+            });
+        });
+
+        ['windDir1500', 'windSpeed1500'].forEach(id => {
+            document.getElementById(id).addEventListener('input', (e) => {
+                const isSpeed = id.includes('Speed');
+                if (isSpeed) {
+                    document.getElementById('windSpeedVal1500').innerText = `${e.target.value} м/с`;
+                }
+                recalculate();
+            });
+        });
+
+        ['exitAlt', 'openAlt', 'acSpeed'].forEach(id => {
+            const el = document.getElementById(id);
+            el.addEventListener('blur', clampAndValidateInputs);
+            el.addEventListener('change', clampAndValidateInputs);
         });
 
         document.querySelectorAll('input').forEach(input => {
@@ -402,6 +1205,9 @@
 
         zeroMarker.on('drag', recalculate);
 
+        map.on('zoomend moveend', recalculate);
+
+        centerMapOn(defaultLat, defaultLng, 14);
         fetchWindData(defaultLat, defaultLng);
         recalculate();
     </script>
